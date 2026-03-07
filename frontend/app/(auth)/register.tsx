@@ -21,15 +21,13 @@ import { THEME } from '../../src/theme';
 import {
   SKILL_CATEGORIES,
   EXPERIENCE_LEVELS,
-  SERVICE_AREAS,
   SOCIAL_PLATFORMS,
 } from '../../src/data/skillCategories';
 
 const STEPS = [
   { id: 1, title: 'Skills', icon: 'construct' },
   { id: 2, title: 'Experience', icon: 'trophy' },
-  { id: 3, title: 'Area', icon: 'location' },
-  { id: 4, title: 'Profile', icon: 'person' },
+  { id: 3, title: 'Profile', icon: 'person' },
 ];
 
 export default function RegisterScreen() {
@@ -47,10 +45,9 @@ export default function RegisterScreen() {
   // Step 2: Experience
   const [experienceLevel, setExperienceLevel] = useState<string | null>(null);
 
-  // Step 3: Service Area
-  const [serviceArea, setServiceArea] = useState<string | null>(null);
+  // Step 3: Service Area - REMOVED
 
-  // Step 4: Profile
+  // Step 3: Profile (was Step 4)
   const [bio, setBio] = useState('');
   const [socialLinks, setSocialLinks] = useState<{ [key: string]: string }>({});
   const [certifications, setCertifications] = useState<string[]>([]);
@@ -102,8 +99,6 @@ export default function RegisterScreen() {
       case 2:
         return experienceLevel !== null;
       case 3:
-        return serviceArea !== null;
-      case 4:
         return true; // Bio is optional
       default:
         return false;
@@ -111,7 +106,7 @@ export default function RegisterScreen() {
   };
 
   const handleNext = () => {
-    if (currentStep < 4) {
+    if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
       scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     } else {
@@ -140,7 +135,6 @@ export default function RegisterScreen() {
       skills: selectedSkills,
       skill_category: selectedCategoryId || undefined,
       experience_level: experienceLevel || undefined,
-      service_area: serviceArea || undefined,
       bio: bio.trim() || undefined,
       social_links: Object.keys(socialLinks).length > 0 ? socialLinks : undefined,
       certifications: certifications.length > 0 ? certifications : undefined,
@@ -186,7 +180,7 @@ export default function RegisterScreen() {
         ))}
       </View>
       <Text style={styles.progressText}>
-        Step {currentStep} of 4: {STEPS[currentStep - 1].title}
+        Step {currentStep} of 3: {STEPS[currentStep - 1].title}
       </Text>
     </View>
   );
@@ -342,45 +336,6 @@ export default function RegisterScreen() {
     </View>
   );
 
-  const renderStep3Area = () => (
-    <View style={styles.stepContent}>
-      <Text style={styles.stepTitle}>Service Area</Text>
-      <Text style={styles.stepDescription}>
-        How far are you willing to travel for jobs?
-      </Text>
-
-      <View style={styles.areaOptions}>
-        {SERVICE_AREAS.map((area) => {
-          const isSelected = serviceArea === area.id;
-          return (
-            <TouchableOpacity
-              key={area.id}
-              style={[
-                styles.areaCard,
-                isSelected && styles.areaCardSelected
-              ]}
-              onPress={() => setServiceArea(area.id)}
-            >
-              <Text style={styles.areaEmoji}>{area.emoji}</Text>
-              <View style={styles.areaInfo}>
-                <Text style={[styles.areaLabel, isSelected && styles.areaLabelSelected]}>
-                  {area.label}
-                </Text>
-                <Text style={styles.areaDesc}>{area.description}</Text>
-              </View>
-              <View style={[
-                styles.radioOuter,
-                isSelected && styles.radioOuterSelected
-              ]}>
-                {isSelected && <View style={styles.radioInner} />}
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-    </View>
-  );
-
   const renderStep4Profile = () => (
     <View style={styles.stepContent}>
       <Text style={styles.stepTitle}>Complete Your Profile</Text>
@@ -508,8 +463,7 @@ export default function RegisterScreen() {
         >
           {currentStep === 1 && renderStep1Skills()}
           {currentStep === 2 && renderStep2Experience()}
-          {currentStep === 3 && renderStep3Area()}
-          {currentStep === 4 && renderStep4Profile()}
+          {currentStep === 3 && renderStep4Profile()}
         </ScrollView>
 
         {/* Footer Button */}
@@ -532,10 +486,10 @@ export default function RegisterScreen() {
             ) : (
               <>
                 <Text style={styles.nextButtonText}>
-                  {currentStep === 4 ? 'Complete Setup' : 'Continue'}
+                  {currentStep === 3 ? 'Complete Setup' : 'Continue'}
                 </Text>
                 <Ionicons
-                  name={currentStep === 4 ? 'checkmark-circle' : 'arrow-forward'}
+                  name={currentStep === 3 ? 'checkmark-circle' : 'arrow-forward'}
                   size={20}
                   color="white"
                 />
