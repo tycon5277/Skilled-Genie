@@ -15,7 +15,7 @@ import { router } from 'expo-router';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useServiceStore } from '../../src/stores/serviceStore';
 import { skilledGenieAPI } from '../../src/api/vendorApi';
-import { THEME, SERVICE_COLORS } from '../../src/theme';
+import { THEME, getSkillColor } from '../../src/theme';
 
 export default function HomeScreen() {
   const { user, refreshProfile } = useAuthStore();
@@ -223,12 +223,13 @@ export default function HomeScreen() {
               style={styles.skillsScroll}
             >
               {userSkills.map((skill, index) => {
-                const color = SERVICE_COLORS[skill] || THEME.primary;
+                const color = getSkillColor(skill);
+                const formattedSkill = skill.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
                 return (
                   <View key={index} style={[styles.skillBadge, { backgroundColor: color + '15' }]}>
                     <View style={[styles.skillDot, { backgroundColor: color }]} />
                     <Text style={[styles.skillText, { color }]}>
-                      {skill.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                      {formattedSkill}
                     </Text>
                   </View>
                 );

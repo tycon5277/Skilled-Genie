@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useServiceStore } from '../../src/stores/serviceStore';
-import { THEME, SERVICE_COLORS } from '../../src/theme';
+import { THEME, getSkillColor } from '../../src/theme';
 
 export default function ProfileScreen() {
   const { user, logout, refreshProfile } = useAuthStore();
@@ -157,14 +157,15 @@ export default function ProfileScreen() {
               <Text style={styles.skillsSectionTitle}>My Skills</Text>
               <View style={styles.skillsRow}>
                 {userSkills.slice(0, 4).map((skill, index) => {
-                  const color = SERVICE_COLORS[skill] || THEME.primary;
+                  const color = getSkillColor(skill);
+                  const formattedSkill = skill.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
                   return (
                     <View 
                       key={index} 
                       style={[styles.skillChip, { backgroundColor: color + '15' }]}
                     >
                       <Text style={[styles.skillChipText, { color }]}>
-                        {skill.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        {formattedSkill}
                       </Text>
                     </View>
                   );

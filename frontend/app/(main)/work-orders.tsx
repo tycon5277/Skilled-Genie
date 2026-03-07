@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useServiceStore } from '../../src/stores/serviceStore';
 import { useAuthStore } from '../../src/stores/authStore';
-import { THEME, SERVICE_COLORS, SERVICE_ICONS } from '../../src/theme';
+import { THEME, getSkillColor, getSkillIcon } from '../../src/theme';
 
 export default function WorkOrdersScreen() {
   const { user } = useAuthStore();
@@ -21,6 +21,25 @@ export default function WorkOrdersScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const isOnline = user?.is_online || false;
+
+  // Get user's skills for filters
+  const userSkills = useMemo(() => {
+    const skills = user?.skills || [];
+    return skills;
+  }, [user?.skills]);
+
+  // Generate filter options based on user's skills
+  const filterOptions = useMemo(() => {
+    const options = [{ key: null, label: 'All' }];
+    userSkills.forEach((skill: string) => {
+      // Format the skill name for display
+      const formattedLabel = skill
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, (l: string) => l.toUpperCase());
+      options.push({ key: skill, label: formattedLabel });
+    });
+    return options;
+  }, [userSkills]);
 
   useEffect(() => {
     fetchAvailableJobs();
@@ -37,8 +56,13 @@ export default function WorkOrdersScreen() {
     : availableJobs;
 
   const renderJobCard = ({ item }: { item: any }) => {
-    const serviceColor = SERVICE_COLORS[item.service_type] || THEME.primary;
-    const serviceIcon = SERVICE_ICONS[item.service_type] || 'construct';
+    const serviceColor = getSkillColor(item.service_type);
+    const serviceIcon = getSkillIcon(item.service_type);
+
+    // Format service type for display
+    const formattedServiceType = item.service_type
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (l: string) => l.toUpperCase());
 
     return (
       <TouchableOpacity
@@ -51,9 +75,7 @@ export default function WorkOrdersScreen() {
             <Ionicons name={serviceIcon as any} size={22} color={serviceColor} />
           </View>
           <View style={styles.jobHeaderInfo}>
-            <Text style={styles.jobServiceType}>
-              {item.service_type.charAt(0).toUpperCase() + item.service_type.slice(1)}
-            </Text>
+            <Text style={styles.jobServiceType}>{formattedServiceType}</Text>
             <View style={styles.distanceBadge}>
               <Ionicons name="location" size={12} color={THEME.textMuted} />
               <Text style={styles.distanceText}>{item.distance || '2.5'} km away</Text>
@@ -108,14 +130,6 @@ export default function WorkOrdersScreen() {
     </View>
   );
 
-  const filters = [
-    { key: null, label: 'All' },
-    { key: 'plumbing', label: 'Plumbing' },
-    { key: 'electrical', label: 'Electrical' },
-    { key: 'cleaning', label: 'Cleaning' },
-    { key: 'carpentry', label: 'Carpentry' },
-  ];
-
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Online Status Bar */}
@@ -135,34 +149,49 @@ export default function WorkOrdersScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Filters */}
+      {/* Filters - Based on user's skills */}
       <View style={styles.filtersContainer}>
         <FlatList
           horizontal
-          data={filters}
+          data={filterOptions}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filtersList}
           keyExtractor={(item) => item.key || 'all'}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[
-                styles.filterChip,
-                activeFilter === item.key && styles.filterChipActive,
-              ]}
-              onPress={() => setActiveFilter(item.key)}
-            >
-              <Text
+          renderItem={({ item }) => {
+            const isActive = activeFilter === item.key;
+            const skillColor = item.key ? getSkillColor(item.key) : THEME.primary;
+            
+            return (
+              <TouchableOpacity
                 style={[
-                  styles.filterText,
-                  activeFilter === item.key && styles.filterTextActive,
+                  styles.filterChip,
+                  isActive && { backgroundColor: skillColor, borderColor: skillColor },
                 ]}
+                onPress={() => setActiveFilter(item.key)}
               >
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          )}
+                <Text
+                  style={[
+                    styles.filterText,
+                    isActive && styles.filterTextActive,
+                  ]}
+                >
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          }}
         />
       </View>
+
+      {/* No Skills Message */}
+      {userSkills.length === 0 && (
+        <View style={styles.noSkillsMessage}>
+          <Ionicons name="information-circle" size={20} color={THEME.info} />
+          <Text style={styles.noSkillsText}>
+            Complete your profile to add skills and receive matching work orders
+          </Text>
+        </View>
+      )}
 
       {/* Jobs List */}
       {isLoading && !refreshing ? (
@@ -257,10 +286,6 @@ const styles = StyleSheet.create({
     borderColor: THEME.cardBorder,
     marginRight: THEME.spacing.sm,
   },
-  filterChipActive: {
-    backgroundColor: THEME.primary,
-    borderColor: THEME.primary,
-  },
   filterText: {
     fontSize: 13,
     fontWeight: '500',
@@ -268,6 +293,21 @@ const styles = StyleSheet.create({
   },
   filterTextActive: {
     color: 'white',
+  },
+  noSkillsMessage: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: THEME.info + '10',
+    marginHorizontal: THEME.spacing.md,
+    padding: THEME.spacing.md,
+    borderRadius: THEME.borderRadius.medium,
+    gap: THEME.spacing.sm,
+    marginBottom: THEME.spacing.sm,
+  },
+  noSkillsText: {
+    flex: 1,
+    fontSize: 13,
+    color: THEME.info,
   },
   loadingContainer: {
     flex: 1,

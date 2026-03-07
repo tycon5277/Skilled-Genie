@@ -8,13 +8,13 @@ import { useServiceStore } from '../../src/stores/serviceStore';
 import { NewJobAlertModal } from '../../src/components/NewJobAlertModal';
 import { THEME } from '../../src/theme';
 
-// Skilled Genie Theme Colors for Tab Bar
-const SKILLED_THEME = {
-  tabBarBackground: '#FDF8F3',    // Warm cream background
-  tabBarBorder: '#E8DFD5',        // Soft warm border
-  tabBarActive: '#D97706',        // Warm amber (active tab)
-  tabBarInactive: '#A8A29E',      // Light warm gray (inactive)
-  iconActiveBackground: '#D9770620',  // 20% opacity amber
+// Fresh, modern, calm, professional tab bar theme
+const TAB_THEME = {
+  tabBarBackground: '#FFFFFF',
+  tabBarBorder: '#E2E8F0',
+  tabBarActive: '#0EA5E9',      // Calm teal/sky blue
+  tabBarInactive: '#94A3B8',    // Soft gray
+  iconActiveBackground: '#0EA5E915',
 };
 
 export default function MainLayout() {
@@ -88,7 +88,7 @@ export default function MainLayout() {
         <Ionicons
           name={name as any}
           size={22}
-          color={focused ? SKILLED_THEME.tabBarActive : SKILLED_THEME.tabBarInactive}
+          color={focused ? TAB_THEME.tabBarActive : TAB_THEME.tabBarInactive}
         />
       </View>
     );
@@ -100,9 +100,9 @@ export default function MainLayout() {
         screenOptions={{
           headerShown: false,
           tabBarStyle: {
-            backgroundColor: SKILLED_THEME.tabBarBackground,
+            backgroundColor: TAB_THEME.tabBarBackground,
             borderTopWidth: 1,
-            borderTopColor: SKILLED_THEME.tabBarBorder,
+            borderTopColor: TAB_THEME.tabBarBorder,
             height: 56 + insets.bottom,
             paddingBottom: insets.bottom + 4,
             paddingTop: 8,
@@ -112,8 +112,8 @@ export default function MainLayout() {
             shadowRadius: 4,
             elevation: 2,
           },
-          tabBarActiveTintColor: SKILLED_THEME.tabBarActive,
-          tabBarInactiveTintColor: SKILLED_THEME.tabBarInactive,
+          tabBarActiveTintColor: TAB_THEME.tabBarActive,
+          tabBarInactiveTintColor: TAB_THEME.tabBarInactive,
           tabBarLabelStyle: {
             fontSize: 10,
             fontWeight: '600',
@@ -194,6 +194,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tabIconContainerActive: {
-    backgroundColor: SKILLED_THEME.iconActiveBackground,
+    backgroundColor: TAB_THEME.iconActiveBackground,
   },
 });
