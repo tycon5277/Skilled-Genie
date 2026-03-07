@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Switch,
+  Image,
+  RefreshControl,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,23 +15,22 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useServiceStore } from '../../src/stores/serviceStore';
-import { skilledGenieAPI } from '../../src/api/vendorApi';
-import { THEME } from '../../src/theme';
+import { THEME, SERVICE_COLORS } from '../../src/theme';
 
 export default function ProfileScreen() {
   const { user, logout, refreshProfile } = useAuthStore();
-  const { totalJobs, totalEarnings, resetStore } = useServiceStore();
-  const [isOnline, setIsOnline] = React.useState(user?.is_online || false);
+  const { totalJobs, totalEarnings, periodEarnings, fetchEarnings } = useServiceStore();
+  const [refreshing, setRefreshing] = useState(false);
+  const isOnline = user?.is_online || false;
 
-  const handleToggleOnline = async (value: boolean) => {
-    setIsOnline(value);
-    try {
-      await skilledGenieAPI.updateAvailability(value);
-      refreshProfile();
-    } catch (error) {
-      setIsOnline(!value);
-      Alert.alert('Error', 'Failed to update availability');
-    }
+  useEffect(() => {
+    fetchEarnings(30); // Last 30 days
+  }, []);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([refreshProfile(), fetchEarnings(30)]);
+    setRefreshing(false);
   };
 
   const handleLogout = () => {
@@ -39,135 +39,198 @@ export default function ProfileScreen() {
       'Are you sure you want to logout?',
       [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
+        { 
+          text: 'Logout', 
           style: 'destructive',
           onPress: async () => {
-            resetStore();
             await logout();
             router.replace('/(auth)/login');
-          },
+          }
         },
       ]
     );
   };
 
+  const menuItems = [
+    {
+      icon: 'wallet',
+      label: 'My Earnings',
+      color: THEME.success,
+      onPress: () => router.push('/my-earnings'),
+    },
+    {
+      icon: 'star',
+      label: 'Reviews & Ratings',
+      color: THEME.warning,
+      onPress: () => router.push('/my-ratings'),
+    },
+    {
+      icon: 'document-text',
+      label: 'Documents',
+      color: THEME.secondary,
+      onPress: () => {},
+    },
+    {
+      icon: 'shield-checkmark',
+      label: 'Verification',
+      color: THEME.accent,
+      onPress: () => {},
+    },
+    {
+      icon: 'settings',
+      label: 'Settings',
+      color: THEME.textSecondary,
+      onPress: () => {},
+    },
+    {
+      icon: 'help-circle',
+      label: 'Help & Support',
+      color: THEME.info,
+      onPress: () => {},
+    },
+  ];
+
+  const userSkills = user?.skills || [];
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Profile Header */}
-        <LinearGradient
-          colors={THEME.gradientPrimary as any}
-          style={styles.profileHeader}
-        >
-          <View style={styles.avatarContainer}>
-            <Ionicons name="person" size={40} color={THEME.primary} />
-          </View>
-          <Text style={styles.userName}>{user?.name || 'Genie'}</Text>
-          <Text style={styles.userPhone}>{user?.phone}</Text>
-          
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{user?.rating?.toFixed(1) || '5.0'}</Text>
-              <View style={styles.statLabel}>
-                <Ionicons name="star" size={12} color="rgba(255,255,255,0.7)" />
-                <Text style={styles.statLabelText}>Rating</Text>
-              </View>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{user?.total_jobs || 0}</Text>
-              <Text style={styles.statLabelText}>Jobs Done</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>${(user?.total_earnings || 0).toFixed(0)}</Text>
-              <Text style={styles.statLabelText}>Earnings</Text>
-            </View>
-          </View>
-        </LinearGradient>
+      {/* Online Status Bar */}
+      {isOnline && (
+        <View style={styles.onlineStatusBar}>
+          <View style={styles.onlineStatusDot} />
+          <Text style={styles.onlineStatusText}>You are Online</Text>
+          <Text style={styles.onlineStatusSubtext}>Visible to customers</Text>
+        </View>
+      )}
 
-        {/* Online Toggle */}
-        <View style={styles.section}>
-          <View style={styles.onlineToggle}>
-            <View style={styles.onlineToggleLeft}>
-              <View style={[styles.onlineIndicator, isOnline && styles.onlineIndicatorActive]} />
-              <View>
-                <Text style={styles.onlineTitle}>
-                  {isOnline ? 'You are Online' : 'You are Offline'}
-                </Text>
-                <Text style={styles.onlineSubtitle}>
-                  {isOnline ? 'Receiving job requests' : 'Not receiving requests'}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={THEME.primary}
+          />
+        }
+      >
+        {/* Profile Card */}
+        <View style={styles.profileCard}>
+          <View style={styles.profileHeader}>
+            <View style={styles.avatarContainer}>
+              {user?.profile_pic ? (
+                <Image 
+                  source={{ uri: user.profile_pic }} 
+                  style={styles.avatar}
+                />
+              ) : (
+                <LinearGradient
+                  colors={THEME.gradientPrimary as any}
+                  style={styles.avatarPlaceholder}
+                >
+                  <Text style={styles.avatarText}>
+                    {user?.name?.charAt(0).toUpperCase() || 'G'}
+                  </Text>
+                </LinearGradient>
+              )}
+              <View style={[styles.onlineBadge, isOnline && styles.onlineBadgeActive]} />
+            </View>
+            <View style={styles.profileInfo}>
+              <Text style={styles.userName}>{user?.name || 'Genie'}</Text>
+              <Text style={styles.userPhone}>{user?.phone || ''}</Text>
+              <View style={styles.ratingRow}>
+                <Ionicons name="star" size={14} color={THEME.warning} />
+                <Text style={styles.ratingText}>
+                  {user?.rating?.toFixed(1) || '0.0'} ({totalJobs} jobs)
                 </Text>
               </View>
             </View>
-            <Switch
-              value={isOnline}
-              onValueChange={handleToggleOnline}
-              trackColor={{ false: THEME.textMuted, true: THEME.success + '50' }}
-              thumbColor={isOnline ? THEME.success : THEME.backgroundSecondary}
-            />
+            <TouchableOpacity style={styles.editBtn}>
+              <Ionicons name="create-outline" size={20} color={THEME.primary} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Skills */}
+          {userSkills.length > 0 && (
+            <View style={styles.skillsSection}>
+              <Text style={styles.skillsSectionTitle}>My Skills</Text>
+              <View style={styles.skillsRow}>
+                {userSkills.slice(0, 4).map((skill, index) => {
+                  const color = SERVICE_COLORS[skill] || THEME.primary;
+                  return (
+                    <View 
+                      key={index} 
+                      style={[styles.skillChip, { backgroundColor: color + '15' }]}
+                    >
+                      <Text style={[styles.skillChipText, { color }]}>
+                        {skill.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                      </Text>
+                    </View>
+                  );
+                })}
+                {userSkills.length > 4 && (
+                  <View style={styles.moreSkillsChip}>
+                    <Text style={styles.moreSkillsText}>+{userSkills.length - 4}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
+        </View>
+
+        {/* Earnings Overview */}
+        <Text style={styles.sectionTitle}>Earnings Overview</Text>
+        <View style={styles.earningsGrid}>
+          <View style={styles.earningsCard}>
+            <Text style={styles.earningsLabel}>Today</Text>
+            <Text style={styles.earningsValue}>$0</Text>
+          </View>
+          <View style={styles.earningsCard}>
+            <Text style={styles.earningsLabel}>This Week</Text>
+            <Text style={styles.earningsValue}>${periodEarnings.toFixed(0)}</Text>
+          </View>
+          <View style={styles.earningsCard}>
+            <Text style={styles.earningsLabel}>This Month</Text>
+            <Text style={styles.earningsValue}>${totalEarnings.toFixed(0)}</Text>
+          </View>
+          <View style={styles.earningsCard}>
+            <Text style={styles.earningsLabel}>Total</Text>
+            <Text style={styles.earningsValue}>${totalEarnings.toFixed(0)}</Text>
           </View>
         </View>
 
         {/* Menu Items */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account</Text>
-          
-          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/my-ratings')}>
-            <View style={[styles.menuIcon, { backgroundColor: THEME.warning + '20' }]}>
-              <Ionicons name="star" size={20} color={THEME.warning} />
-            </View>
-            <Text style={styles.menuText}>My Ratings</Text>
-            <Ionicons name="chevron-forward" size={20} color={THEME.textMuted} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/my-earnings')}>
-            <View style={[styles.menuIcon, { backgroundColor: THEME.success + '20' }]}>
-              <Ionicons name="wallet" size={20} color={THEME.success} />
-            </View>
-            <Text style={styles.menuText}>My Earnings</Text>
-            <Ionicons name="chevron-forward" size={20} color={THEME.textMuted} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem}>
-            <View style={[styles.menuIcon, { backgroundColor: THEME.secondary + '20' }]}>
-              <Ionicons name="document-text" size={20} color={THEME.secondary} />
-            </View>
-            <Text style={styles.menuText}>Job History</Text>
-            <Ionicons name="chevron-forward" size={20} color={THEME.textMuted} />
-          </TouchableOpacity>
+        <Text style={styles.sectionTitle}>Account</Text>
+        <View style={styles.menuContainer}>
+          {menuItems.map((item, index) => (
+            <TouchableOpacity
+              key={index}
+              style={styles.menuItem}
+              onPress={item.onPress}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.menuIcon, { backgroundColor: item.color + '15' }]}>
+                <Ionicons name={item.icon as any} size={20} color={item.color} />
+              </View>
+              <Text style={styles.menuLabel}>{item.label}</Text>
+              <Ionicons name="chevron-forward" size={18} color={THEME.textMuted} />
+            </TouchableOpacity>
+          ))}
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Settings</Text>
+        {/* Logout Button */}
+        <TouchableOpacity
+          style={styles.logoutBtn}
+          onPress={handleLogout}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="log-out-outline" size={20} color={THEME.error} />
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
-            <View style={[styles.menuIcon, { backgroundColor: THEME.primary + '20' }]}>
-              <Ionicons name="notifications" size={20} color={THEME.primary} />
-            </View>
-            <Text style={styles.menuText}>Notifications</Text>
-            <Ionicons name="chevron-forward" size={20} color={THEME.textMuted} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem}>
-            <View style={[styles.menuIcon, { backgroundColor: THEME.textSecondary + '20' }]}>
-              <Ionicons name="help-circle" size={20} color={THEME.textSecondary} />
-            </View>
-            <Text style={styles.menuText}>Help & Support</Text>
-            <Ionicons name="chevron-forward" size={20} color={THEME.textMuted} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Logout */}
-        <View style={styles.section}>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Ionicons name="log-out" size={20} color={THEME.error} />
-            <Text style={styles.logoutText}>Logout</Text>
-          </TouchableOpacity>
-        </View>
-
-        <Text style={styles.version}>Version 1.0.0</Text>
+        {/* App Version */}
+        <Text style={styles.versionText}>Skilled Genie v1.0.0</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -178,146 +241,231 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: THEME.background,
   },
-  profileHeader: {
-    padding: THEME.spacing.lg,
+  onlineStatusBar: {
+    backgroundColor: THEME.success,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: THEME.spacing.xl,
-    paddingBottom: THEME.spacing.xl,
+    justifyContent: 'center',
+    gap: 8,
+  },
+  onlineStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'white',
+  },
+  onlineStatusText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'white',
+  },
+  onlineStatusSubtext: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: THEME.spacing.md,
+    paddingBottom: THEME.spacing.xxl,
+  },
+  profileCard: {
+    backgroundColor: THEME.cardBg,
+    borderRadius: THEME.borderRadius.xl,
+    padding: THEME.spacing.lg,
+    marginBottom: THEME.spacing.lg,
+    borderWidth: 1,
+    borderColor: THEME.cardBorder,
+  },
+  profileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   avatarContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'white',
+    position: 'relative',
+  },
+  avatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+  },
+  avatarPlaceholder: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: THEME.spacing.md,
-    ...THEME.shadow.medium,
   },
-  userName: {
-    fontSize: 24,
+  avatarText: {
+    fontSize: 28,
     fontWeight: '700',
     color: 'white',
+  },
+  onlineBadge: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: THEME.textMuted,
+    borderWidth: 3,
+    borderColor: THEME.cardBg,
+  },
+  onlineBadgeActive: {
+    backgroundColor: THEME.success,
+  },
+  profileInfo: {
+    flex: 1,
+    marginLeft: THEME.spacing.md,
+  },
+  userName: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: THEME.text,
   },
   userPhone: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
-    marginTop: 4,
+    color: THEME.textSecondary,
+    marginTop: 2,
   },
-  statsRow: {
-    flexDirection: 'row',
-    marginTop: THEME.spacing.lg,
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    borderRadius: THEME.borderRadius.large,
-    padding: THEME.spacing.md,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: 'white',
-  },
-  statLabel: {
+  ratingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    marginTop: 4,
   },
-  statLabelText: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.7)',
-    marginTop: 2,
+  ratingText: {
+    fontSize: 13,
+    color: THEME.textSecondary,
   },
-  statDivider: {
-    width: 1,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+  editBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: THEME.primary + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  section: {
-    padding: THEME.spacing.md,
+  skillsSection: {
+    marginTop: THEME.spacing.md,
+    paddingTop: THEME.spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: THEME.cardBorder,
   },
-  sectionTitle: {
-    fontSize: 14,
+  skillsSectionTitle: {
+    fontSize: 12,
     fontWeight: '600',
     color: THEME.textMuted,
     marginBottom: THEME.spacing.sm,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  onlineToggle: {
+  skillsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: THEME.cardBg,
-    padding: THEME.spacing.md,
-    borderRadius: THEME.borderRadius.large,
-    ...THEME.shadow.small,
+    flexWrap: 'wrap',
+    gap: THEME.spacing.xs,
   },
-  onlineToggleLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: THEME.spacing.sm,
+  skillChip: {
+    paddingHorizontal: THEME.spacing.sm,
+    paddingVertical: 4,
+    borderRadius: THEME.borderRadius.small,
   },
-  onlineIndicator: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: THEME.textMuted,
+  skillChipText: {
+    fontSize: 12,
+    fontWeight: '500',
   },
-  onlineIndicatorActive: {
-    backgroundColor: THEME.success,
+  moreSkillsChip: {
+    paddingHorizontal: THEME.spacing.sm,
+    paddingVertical: 4,
+    borderRadius: THEME.borderRadius.small,
+    backgroundColor: THEME.backgroundSecondary,
   },
-  onlineTitle: {
-    fontSize: 16,
+  moreSkillsText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: THEME.textSecondary,
+  },
+  sectionTitle: {
+    fontSize: 18,
     fontWeight: '600',
     color: THEME.text,
+    marginBottom: THEME.spacing.md,
   },
-  onlineSubtitle: {
+  earningsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: THEME.spacing.sm,
+    marginBottom: THEME.spacing.lg,
+  },
+  earningsCard: {
+    width: '48%',
+    backgroundColor: THEME.cardBg,
+    borderRadius: THEME.borderRadius.large,
+    padding: THEME.spacing.md,
+    borderWidth: 1,
+    borderColor: THEME.cardBorder,
+  },
+  earningsLabel: {
     fontSize: 12,
     color: THEME.textMuted,
+    marginBottom: 4,
+  },
+  earningsValue: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: THEME.text,
+  },
+  menuContainer: {
+    backgroundColor: THEME.cardBg,
+    borderRadius: THEME.borderRadius.large,
+    overflow: 'hidden',
+    marginBottom: THEME.spacing.lg,
+    borderWidth: 1,
+    borderColor: THEME.cardBorder,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: THEME.cardBg,
     padding: THEME.spacing.md,
-    borderRadius: THEME.borderRadius.medium,
-    marginBottom: THEME.spacing.sm,
-    ...THEME.shadow.small,
+    borderBottomWidth: 1,
+    borderBottomColor: THEME.cardBorder,
   },
   menuIcon: {
     width: 40,
     height: 40,
-    borderRadius: THEME.borderRadius.small,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: THEME.spacing.sm,
   },
-  menuText: {
+  menuLabel: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15,
     color: THEME.text,
+    marginLeft: THEME.spacing.sm,
   },
-  logoutButton: {
+  logoutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: THEME.error + '10',
-    padding: THEME.spacing.md,
-    borderRadius: THEME.borderRadius.medium,
     gap: THEME.spacing.sm,
+    padding: THEME.spacing.md,
+    backgroundColor: THEME.error + '10',
+    borderRadius: THEME.borderRadius.large,
+    marginBottom: THEME.spacing.lg,
   },
   logoutText: {
     fontSize: 16,
     fontWeight: '600',
     color: THEME.error,
   },
-  version: {
+  versionText: {
+    textAlign: 'center',
     fontSize: 12,
     color: THEME.textMuted,
-    textAlign: 'center',
-    marginTop: THEME.spacing.md,
-    marginBottom: THEME.spacing.xxl,
+    marginBottom: THEME.spacing.lg,
   },
 });

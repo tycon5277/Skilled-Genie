@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -13,10 +14,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useServiceStore } from '../../src/stores/serviceStore';
-import { THEME } from '../../src/theme';
+import { skilledGenieAPI } from '../../src/api/vendorApi';
+import { THEME, SERVICE_COLORS } from '../../src/theme';
 
 export default function HomeScreen() {
-  const { user } = useAuthStore();
+  const { user, refreshProfile } = useAuthStore();
   const {
     activeJobs,
     availableJobs,
@@ -25,10 +27,11 @@ export default function HomeScreen() {
     fetchEarnings,
     periodEarnings,
     totalJobs,
-    availableJobsLoading,
+    totalEarnings,
   } = useServiceStore();
 
-  const [refreshing, setRefreshing] = React.useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [isOnline, setIsOnline] = useState(user?.is_online || false);
 
   useEffect(() => {
     fetchEarnings(7);
@@ -40,8 +43,19 @@ export default function HomeScreen() {
       fetchActiveJobs(),
       fetchAvailableJobs(),
       fetchEarnings(7),
+      refreshProfile(),
     ]);
     setRefreshing(false);
+  };
+
+  const handleToggleOnline = async (value: boolean) => {
+    setIsOnline(value);
+    try {
+      await skilledGenieAPI.updateAvailability(value);
+      refreshProfile();
+    } catch (error) {
+      setIsOnline(!value);
+    }
   };
 
   const getGreeting = () => {
@@ -51,8 +65,20 @@ export default function HomeScreen() {
     return 'Good Evening';
   };
 
+  // Get user's skills for badges
+  const userSkills = user?.skills || [];
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Online Status Bar */}
+      {isOnline && (
+        <View style={styles.onlineStatusBar}>
+          <View style={styles.onlineStatusDot} />
+          <Text style={styles.onlineStatusText}>You are Online</Text>
+          <Text style={styles.onlineStatusSubtext}>Visible to customers</Text>
+        </View>
+      )}
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -65,159 +91,195 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* Header */}
+        {/* Header with Online Toggle */}
         <View style={styles.header}>
           <View>
             <Text style={styles.greeting}>{getGreeting()}</Text>
             <Text style={styles.userName}>{user?.name || 'Genie'}</Text>
           </View>
-          <TouchableOpacity
-            style={styles.notificationButton}
-            onPress={() => router.push('/profile')}
+          <View style={styles.headerRight}>
+            <View style={styles.onlineToggle}>
+              <Text style={[styles.onlineLabel, isOnline && styles.onlineLabelActive]}>
+                {isOnline ? 'Online' : 'Offline'}
+              </Text>
+              <Switch
+                value={isOnline}
+                onValueChange={handleToggleOnline}
+                trackColor={{ false: THEME.textMuted, true: THEME.success + '50' }}
+                thumbColor={isOnline ? THEME.success : THEME.backgroundSecondary}
+              />
+            </View>
+          </View>
+        </View>
+
+        {/* Rating Card */}
+        <View style={styles.ratingCard}>
+          <View style={styles.ratingLeft}>
+            <View style={styles.ratingStars}>
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Ionicons
+                  key={i}
+                  name={i <= Math.round(user?.rating || 0) ? 'star' : 'star-outline'}
+                  size={18}
+                  color={THEME.warning}
+                />
+              ))}
+            </View>
+            <Text style={styles.ratingValue}>
+              {user?.rating ? user.rating.toFixed(1) : 'No ratings'}
+            </Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.viewRatingsBtn}
+            onPress={() => router.push('/my-ratings')}
           >
-            <Ionicons name="notifications" size={24} color={THEME.text} />
+            <Text style={styles.viewRatingsText}>View Reviews</Text>
+            <Ionicons name="chevron-forward" size={16} color={THEME.primary} />
           </TouchableOpacity>
         </View>
 
-        {/* Active Jobs Banner */}
-        {activeJobs.length > 0 ? (
+        {/* Today's Earnings */}
+        <View style={styles.earningsCard}>
+          <LinearGradient
+            colors={THEME.gradientPrimary as any}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.earningsGradient}
+          >
+            <View style={styles.earningsContent}>
+              <View>
+                <Text style={styles.earningsLabel}>This Week's Earnings</Text>
+                <Text style={styles.earningsAmount}>${periodEarnings.toFixed(2)}</Text>
+              </View>
+              <TouchableOpacity 
+                style={styles.earningsBtn}
+                onPress={() => router.push('/my-earnings')}
+              >
+                <Ionicons name="wallet" size={24} color={THEME.primary} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.earningsStats}>
+              <View style={styles.earningStat}>
+                <Text style={styles.earningStatValue}>{totalJobs}</Text>
+                <Text style={styles.earningStatLabel}>Jobs Done</Text>
+              </View>
+              <View style={styles.earningStatDivider} />
+              <View style={styles.earningStat}>
+                <Text style={styles.earningStatValue}>${totalEarnings.toFixed(0)}</Text>
+                <Text style={styles.earningStatLabel}>Total Earned</Text>
+              </View>
+            </View>
+          </LinearGradient>
+        </View>
+
+        {/* Active Job Banner */}
+        {activeJobs.length > 0 && (
           <TouchableOpacity
             style={styles.activeJobBanner}
             onPress={() => router.push('/active-job')}
             activeOpacity={0.8}
           >
-            <LinearGradient
-              colors={THEME.gradientSecondary as any}
-              style={styles.bannerGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-            >
-              <View style={styles.bannerContent}>
-                <Ionicons name="flash" size={28} color="white" />
-                <View style={styles.bannerText}>
-                  <Text style={styles.bannerTitle}>Active Job</Text>
-                  <Text style={styles.bannerSubtitle}>
-                    {activeJobs[0].service_type.charAt(0).toUpperCase() +
-                      activeJobs[0].service_type.slice(1)}{' '}
-                    - {activeJobs[0].status.replace('_', ' ')}
-                  </Text>
-                </View>
-              </View>
-              <Ionicons name="chevron-forward" size={24} color="white" />
-            </LinearGradient>
+            <View style={styles.activeJobIcon}>
+              <Ionicons name="flash" size={24} color={THEME.secondary} />
+            </View>
+            <View style={styles.activeJobInfo}>
+              <Text style={styles.activeJobTitle}>Active Job</Text>
+              <Text style={styles.activeJobSubtitle}>
+                {activeJobs[0].service_type.charAt(0).toUpperCase() +
+                  activeJobs[0].service_type.slice(1)} - {activeJobs[0].status.replace('_', ' ')}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={THEME.secondary} />
           </TouchableOpacity>
-        ) : (
-          <View style={styles.noActiveJob}>
-            <Ionicons name="checkmark-circle" size={24} color={THEME.success} />
-            <Text style={styles.noActiveJobText}>No active jobs</Text>
-          </View>
         )}
 
-        {/* Stats Cards */}
-        <View style={styles.statsRow}>
+        {/* Quick Stats */}
+        <Text style={styles.sectionTitle}>Quick Stats</Text>
+        <View style={styles.statsGrid}>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>${periodEarnings.toFixed(0)}</Text>
-            <Text style={styles.statLabel}>This Week</Text>
+            <Ionicons name="briefcase" size={24} color={THEME.primary} />
+            <Text style={styles.statValue}>{availableJobs.length}</Text>
+            <Text style={styles.statLabel}>Available Jobs</Text>
           </View>
           <View style={styles.statCard}>
+            <Ionicons name="checkmark-circle" size={24} color={THEME.success} />
             <Text style={styles.statValue}>{totalJobs}</Text>
-            <Text style={styles.statLabel}>Total Jobs</Text>
+            <Text style={styles.statLabel}>Completed</Text>
           </View>
           <View style={styles.statCard}>
-            <View style={styles.ratingContainer}>
-              <Text style={styles.statValue}>{user?.rating?.toFixed(1) || '5.0'}</Text>
-              <Ionicons name="star" size={16} color={THEME.warning} />
-            </View>
+            <Ionicons name="star" size={24} color={THEME.warning} />
+            <Text style={styles.statValue}>{user?.rating?.toFixed(1) || '0.0'}</Text>
             <Text style={styles.statLabel}>Rating</Text>
           </View>
         </View>
 
+        {/* Skill Badges */}
+        {userSkills.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Your Skills</Text>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              style={styles.skillsScroll}
+            >
+              {userSkills.map((skill, index) => {
+                const color = SERVICE_COLORS[skill] || THEME.primary;
+                return (
+                  <View key={index} style={[styles.skillBadge, { backgroundColor: color + '15' }]}>
+                    <View style={[styles.skillDot, { backgroundColor: color }]} />
+                    <Text style={[styles.skillText, { color }]}>
+                      {skill.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </Text>
+                  </View>
+                );
+              })}
+            </ScrollView>
+          </>
+        )}
+
         {/* Quick Actions */}
         <Text style={styles.sectionTitle}>Quick Actions</Text>
-        <View style={styles.quickActions}>
+        <View style={styles.actionsRow}>
           <TouchableOpacity
-            style={styles.quickAction}
-            onPress={() => router.push('/jobs')}
+            style={styles.actionCard}
+            onPress={() => router.push('/work-orders')}
           >
-            <View style={[styles.quickActionIcon, { backgroundColor: THEME.primary + '20' }]}>
-              <Ionicons name="briefcase" size={24} color={THEME.primary} />
+            <View style={[styles.actionIcon, { backgroundColor: THEME.primary + '15' }]}>
+              <Ionicons name="search" size={22} color={THEME.primary} />
             </View>
-            <Text style={styles.quickActionText}>Find Jobs</Text>
-            <View style={styles.quickActionBadge}>
-              <Text style={styles.quickActionBadgeText}>{availableJobs.length}</Text>
-            </View>
+            <Text style={styles.actionText}>Find Jobs</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.quickAction}
+            style={styles.actionCard}
+            onPress={() => router.push('/schedule')}
+          >
+            <View style={[styles.actionIcon, { backgroundColor: THEME.secondary + '15' }]}>
+              <Ionicons name="calendar" size={22} color={THEME.secondary} />
+            </View>
+            <Text style={styles.actionText}>Schedule</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionCard}
             onPress={() => router.push('/my-earnings')}
           >
-            <View style={[styles.quickActionIcon, { backgroundColor: THEME.success + '20' }]}>
-              <Ionicons name="wallet" size={24} color={THEME.success} />
+            <View style={[styles.actionIcon, { backgroundColor: THEME.success + '15' }]}>
+              <Ionicons name="cash" size={22} color={THEME.success} />
             </View>
-            <Text style={styles.quickActionText}>Earnings</Text>
+            <Text style={styles.actionText}>Earnings</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.quickAction}
-            onPress={() => router.push('/my-ratings')}
-          >
-            <View style={[styles.quickActionIcon, { backgroundColor: THEME.warning + '20' }]}>
-              <Ionicons name="star" size={24} color={THEME.warning} />
-            </View>
-            <Text style={styles.quickActionText}>Ratings</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.quickAction}
+            style={styles.actionCard}
             onPress={() => router.push('/profile')}
           >
-            <View style={[styles.quickActionIcon, { backgroundColor: THEME.secondary + '20' }]}>
-              <Ionicons name="settings" size={24} color={THEME.secondary} />
+            <View style={[styles.actionIcon, { backgroundColor: THEME.warning + '15' }]}>
+              <Ionicons name="settings" size={22} color={THEME.warning} />
             </View>
-            <Text style={styles.quickActionText}>Settings</Text>
+            <Text style={styles.actionText}>Settings</Text>
           </TouchableOpacity>
         </View>
-
-        {/* Available Jobs Preview */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Available Jobs</Text>
-          <TouchableOpacity onPress={() => router.push('/jobs')}>
-            <Text style={styles.seeAll}>See All</Text>
-          </TouchableOpacity>
-        </View>
-
-        {availableJobs.length > 0 ? (
-          availableJobs.slice(0, 3).map((job) => (
-            <TouchableOpacity
-              key={job.job_id}
-              style={styles.jobPreview}
-              onPress={() => {
-                useServiceStore.getState().setSelectedJob(job);
-                router.push('/job-details');
-              }}
-            >
-              <View style={styles.jobPreviewLeft}>
-                <Text style={styles.jobPreviewType}>
-                  {job.service_type.charAt(0).toUpperCase() + job.service_type.slice(1)}
-                </Text>
-                <Text style={styles.jobPreviewDesc} numberOfLines={1}>
-                  {job.description}
-                </Text>
-              </View>
-              <View style={styles.jobPreviewRight}>
-                <Text style={styles.jobPreviewPay}>${job.estimated_pay.toFixed(0)}</Text>
-                <Text style={styles.jobPreviewDistance}>{job.distance_km} km</Text>
-              </View>
-            </TouchableOpacity>
-          ))
-        ) : (
-          <View style={styles.emptyState}>
-            <Ionicons name="briefcase-outline" size={48} color={THEME.textMuted} />
-            <Text style={styles.emptyStateText}>No jobs available right now</Text>
-            <Text style={styles.emptyStateSubtext}>Pull down to refresh</Text>
-          </View>
-        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -227,6 +289,30 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: THEME.background,
+  },
+  onlineStatusBar: {
+    backgroundColor: THEME.success,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  onlineStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'white',
+  },
+  onlineStatusText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'white',
+  },
+  onlineStatusSubtext: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
   },
   scrollView: {
     flex: 1,
@@ -250,60 +336,150 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: THEME.text,
   },
-  notificationButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: THEME.cardBg,
-    justifyContent: 'center',
+  headerRight: {
+    alignItems: 'flex-end',
+  },
+  onlineToggle: {
+    flexDirection: 'row',
     alignItems: 'center',
-    ...THEME.shadow.small,
+    gap: THEME.spacing.sm,
   },
-  activeJobBanner: {
-    borderRadius: THEME.borderRadius.large,
-    overflow: 'hidden',
-    marginBottom: THEME.spacing.lg,
-    ...THEME.shadow.medium,
+  onlineLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: THEME.textMuted,
   },
-  bannerGradient: {
+  onlineLabelActive: {
+    color: THEME.success,
+  },
+  ratingCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    backgroundColor: THEME.cardBg,
     padding: THEME.spacing.md,
+    borderRadius: THEME.borderRadius.large,
+    marginBottom: THEME.spacing.md,
+    borderWidth: 1,
+    borderColor: THEME.cardBorder,
   },
-  bannerContent: {
+  ratingLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: THEME.spacing.sm,
   },
-  bannerText: {
-    marginLeft: THEME.spacing.xs,
+  ratingStars: {
+    flexDirection: 'row',
+    gap: 2,
   },
-  bannerTitle: {
+  ratingValue: {
     fontSize: 16,
-    fontWeight: '700',
-    color: 'white',
+    fontWeight: '600',
+    color: THEME.text,
   },
-  bannerSubtitle: {
+  viewRatingsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  viewRatingsText: {
+    fontSize: 13,
+    color: THEME.primary,
+    fontWeight: '500',
+  },
+  earningsCard: {
+    borderRadius: THEME.borderRadius.xl,
+    overflow: 'hidden',
+    marginBottom: THEME.spacing.md,
+  },
+  earningsGradient: {
+    padding: THEME.spacing.lg,
+  },
+  earningsContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: THEME.spacing.md,
+  },
+  earningsLabel: {
     fontSize: 13,
     color: 'rgba(255,255,255,0.8)',
   },
-  noActiveJob: {
+  earningsAmount: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: 'white',
+  },
+  earningsBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  earningsStats: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    borderRadius: THEME.borderRadius.medium,
+    padding: THEME.spacing.sm,
+  },
+  earningStat: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  earningStatValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: 'white',
+  },
+  earningStatLabel: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.7)',
+  },
+  earningStatDivider: {
+    width: 1,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    marginVertical: 4,
+  },
+  activeJobBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: THEME.success + '15',
+    backgroundColor: THEME.secondary + '15',
     padding: THEME.spacing.md,
-    borderRadius: THEME.borderRadius.medium,
+    borderRadius: THEME.borderRadius.large,
     marginBottom: THEME.spacing.lg,
-    gap: THEME.spacing.sm,
+    borderWidth: 1,
+    borderColor: THEME.secondary + '30',
   },
-  noActiveJobText: {
-    fontSize: 14,
-    color: THEME.success,
-    fontWeight: '500',
+  activeJobIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: THEME.secondary + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  statsRow: {
+  activeJobInfo: {
+    flex: 1,
+    marginLeft: THEME.spacing.sm,
+  },
+  activeJobTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: THEME.secondary,
+  },
+  activeJobSubtitle: {
+    fontSize: 13,
+    color: THEME.textSecondary,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: THEME.text,
+    marginBottom: THEME.spacing.md,
+  },
+  statsGrid: {
     flexDirection: 'row',
     gap: THEME.spacing.sm,
     marginBottom: THEME.spacing.lg,
@@ -312,130 +488,68 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: THEME.cardBg,
     padding: THEME.spacing.md,
-    borderRadius: THEME.borderRadius.medium,
+    borderRadius: THEME.borderRadius.large,
     alignItems: 'center',
-    ...THEME.shadow.small,
+    borderWidth: 1,
+    borderColor: THEME.cardBorder,
   },
   statValue: {
     fontSize: 22,
     fontWeight: '700',
     color: THEME.text,
+    marginTop: THEME.spacing.xs,
   },
   statLabel: {
     fontSize: 11,
     color: THEME.textMuted,
-    marginTop: 4,
-    textTransform: 'uppercase',
+    marginTop: 2,
   },
-  ratingContainer: {
+  skillsScroll: {
+    marginBottom: THEME.spacing.lg,
+  },
+  skillBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    paddingHorizontal: THEME.spacing.md,
+    paddingVertical: THEME.spacing.sm,
+    borderRadius: THEME.borderRadius.full,
+    marginRight: THEME.spacing.sm,
+    gap: 6,
   },
-  sectionTitle: {
-    fontSize: 18,
+  skillDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  skillText: {
+    fontSize: 13,
     fontWeight: '600',
-    color: THEME.text,
-    marginBottom: THEME.spacing.md,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: THEME.spacing.md,
-  },
-  seeAll: {
-    fontSize: 14,
-    color: THEME.primary,
-    fontWeight: '500',
-  },
-  quickActions: {
+  actionsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: THEME.spacing.sm,
-    marginBottom: THEME.spacing.lg,
   },
-  quickAction: {
+  actionCard: {
     width: '48%',
     backgroundColor: THEME.cardBg,
     padding: THEME.spacing.md,
-    borderRadius: THEME.borderRadius.medium,
-    flexDirection: 'row',
+    borderRadius: THEME.borderRadius.large,
     alignItems: 'center',
-    gap: THEME.spacing.sm,
-    ...THEME.shadow.small,
+    borderWidth: 1,
+    borderColor: THEME.cardBorder,
   },
-  quickActionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: THEME.borderRadius.small,
+  actionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: THEME.spacing.sm,
   },
-  quickActionText: {
+  actionText: {
     fontSize: 14,
     fontWeight: '500',
     color: THEME.text,
-    flex: 1,
-  },
-  quickActionBadge: {
-    backgroundColor: THEME.primary,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  quickActionBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: 'white',
-  },
-  jobPreview: {
-    backgroundColor: THEME.cardBg,
-    padding: THEME.spacing.md,
-    borderRadius: THEME.borderRadius.medium,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: THEME.spacing.sm,
-    ...THEME.shadow.small,
-  },
-  jobPreviewLeft: {
-    flex: 1,
-  },
-  jobPreviewType: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: THEME.text,
-  },
-  jobPreviewDesc: {
-    fontSize: 13,
-    color: THEME.textSecondary,
-    marginTop: 2,
-  },
-  jobPreviewRight: {
-    alignItems: 'flex-end',
-  },
-  jobPreviewPay: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: THEME.primary,
-  },
-  jobPreviewDistance: {
-    fontSize: 12,
-    color: THEME.textMuted,
-  },
-  emptyState: {
-    alignItems: 'center',
-    padding: THEME.spacing.xl,
-  },
-  emptyStateText: {
-    fontSize: 16,
-    color: THEME.textSecondary,
-    marginTop: THEME.spacing.md,
-  },
-  emptyStateSubtext: {
-    fontSize: 13,
-    color: THEME.textMuted,
-    marginTop: THEME.spacing.xs,
   },
 });

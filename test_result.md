@@ -194,6 +194,18 @@ frontend:
         agent: "main"
         comment: "Phone input -> OTP -> Login flow complete"
 
+  - task: "4-Tab Bottom Navigation"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/(main)/_layout.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "4-tab navigation with Home, Work Orders, Schedule, Profile tabs. Warm amber theme applied."
+
   - task: "Home Dashboard"
     implemented: true
     working: true
@@ -204,14 +216,50 @@ frontend:
     status_history:
       - working: true
         agent: "main"
-        comment: "Shows greeting, stats, quick actions, jobs preview"
+        comment: "Shows greeting, stats, quick actions, jobs preview, online status bar"
 
-  - task: "Jobs List Screen"
+  - task: "Work Orders Screen"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/(main)/work-orders.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Shows available jobs with filters, job cards with accept/decline buttons"
+
+  - task: "Schedule Screen"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/(main)/schedule.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Calendar strip, day/week toggle, appointment cards with status badges"
+
+  - task: "Profile Screen"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/(main)/profile.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Profile card, skills, earnings overview, account menu, logout"
+
+  - task: "Jobs List Screen (Old)"
     implemented: true
     working: true
     file: "/app/frontend/app/(main)/jobs.tsx"
     stuck_count: 0
-    priority: "high"
+    priority: "low"
     needs_retesting: false
 
   - task: "Job Details Modal"
@@ -226,14 +274,6 @@ frontend:
     implemented: true
     working: true
     file: "/app/frontend/app/(main)/active-job.tsx"
-    stuck_count: 0
-    priority: "high"
-    needs_retesting: false
-
-  - task: "Profile Screen"
-    implemented: true
-    working: true
-    file: "/app/frontend/app/(main)/profile.tsx"
     stuck_count: 0
     priority: "high"
     needs_retesting: false
