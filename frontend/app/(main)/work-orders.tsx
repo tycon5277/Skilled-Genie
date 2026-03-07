@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,20 +23,12 @@ export default function WorkOrdersScreen() {
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const isOnline = user?.is_online || false;
 
-  // Get user's skills for filters
-  const userSkills = useMemo(() => {
-    const skills = user?.skills || [];
-    return skills;
-  }, [user?.skills]);
+  const userSkills = useMemo(() => user?.skills || [], [user?.skills]);
 
-  // Generate filter options based on user's skills
   const filterOptions = useMemo(() => {
     const options = [{ key: null, label: 'All' }];
     userSkills.forEach((skill: string) => {
-      // Format the skill name for display
-      const formattedLabel = skill
-        .replace(/_/g, ' ')
-        .replace(/\b\w/g, (l: string) => l.toUpperCase());
+      const formattedLabel = skill.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
       options.push({ key: skill, label: formattedLabel });
     });
     return options;
@@ -58,73 +51,59 @@ export default function WorkOrdersScreen() {
   const renderJobCard = ({ item }: { item: any }) => {
     const serviceColor = getSkillColor(item.service_type);
     const serviceIcon = getSkillIcon(item.service_type);
-
-    // Format service type for display
-    const formattedServiceType = item.service_type
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, (l: string) => l.toUpperCase());
+    const formattedServiceType = item.service_type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
 
     return (
-      <TouchableOpacity
-        style={styles.jobCard}
-        onPress={() => router.push({ pathname: '/job-details', params: { jobId: item.job_id } })}
-        activeOpacity={0.8}
-      >
+      <View style={styles.jobCard}>
         <View style={styles.jobHeader}>
-          <View style={[styles.serviceIconContainer, { backgroundColor: serviceColor + '15' }]}>
-            <Ionicons name={serviceIcon as any} size={22} color={serviceColor} />
+          <View style={[styles.serviceIcon, { backgroundColor: serviceColor + '15' }]}>
+            <Ionicons name={serviceIcon as any} size={24} color={serviceColor} />
           </View>
-          <View style={styles.jobHeaderInfo}>
-            <Text style={styles.jobServiceType}>{formattedServiceType}</Text>
-            <View style={styles.distanceBadge}>
-              <Ionicons name="location" size={12} color={THEME.textMuted} />
-              <Text style={styles.distanceText}>{item.distance || '2.5'} km away</Text>
-            </View>
+          <View style={styles.jobInfo}>
+            <Text style={styles.jobTitle}>{formattedServiceType}</Text>
+            <Text style={styles.jobCustomer}>{item.customer_name || 'Customer'}</Text>
           </View>
           <View style={styles.payBadge}>
-            <Text style={styles.payAmount}>${item.estimated_pay || item.price || '45'}</Text>
+            <Text style={styles.payAmount}>${item.estimated_pay || '45'}</Text>
           </View>
         </View>
 
         <View style={styles.jobDetails}>
-          <View style={styles.detailRow}>
-            <Ionicons name="person" size={14} color={THEME.textSecondary} />
-            <Text style={styles.detailText}>{item.customer_name || 'Customer'}</Text>
+          <View style={styles.detailItem}>
+            <Ionicons name="location-outline" size={16} color={THEME.textMuted} />
+            <Text style={styles.detailText}>{item.distance || '2.5'} km away</Text>
           </View>
-          <View style={styles.detailRow}>
-            <Ionicons name="time" size={14} color={THEME.textSecondary} />
-            <Text style={styles.detailText}>{item.scheduled_time || 'Flexible timing'}</Text>
+          <View style={styles.detailItem}>
+            <Ionicons name="time-outline" size={16} color={THEME.textMuted} />
+            <Text style={styles.detailText}>{item.scheduled_time || 'Flexible'}</Text>
           </View>
         </View>
 
-        <View style={styles.jobFooter}>
-          <Text style={styles.jobDescription} numberOfLines={2}>
-            {item.description || 'Service request details will appear here'}
-          </Text>
-        </View>
+        <Text style={styles.jobDescription} numberOfLines={2}>
+          {item.description || 'Service request details will appear here'}
+        </Text>
 
         <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.declineBtn}>
+          <TouchableOpacity style={styles.declineBtn} activeOpacity={0.7}>
             <Text style={styles.declineBtnText}>Decline</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.acceptBtn}>
+          <TouchableOpacity style={styles.acceptBtn} activeOpacity={0.7}>
             <Text style={styles.acceptBtnText}>Accept</Text>
-            <Ionicons name="checkmark" size={16} color="white" />
           </TouchableOpacity>
         </View>
-      </TouchableOpacity>
+      </View>
     );
   };
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <View style={styles.emptyIconContainer}>
-        <Ionicons name="briefcase-outline" size={64} color={THEME.textMuted} />
+      <View style={styles.emptyIcon}>
+        <Ionicons name="briefcase-outline" size={48} color={THEME.textMuted} />
       </View>
-      <Text style={styles.emptyTitle}>No Work Orders Available</Text>
+      <Text style={styles.emptyTitle}>No Jobs Available</Text>
       <Text style={styles.emptySubtitle}>
         {isOnline 
-          ? 'Check back soon for new service requests matching your skills'
+          ? 'New jobs matching your skills will appear here'
           : 'Go online to start receiving work orders'}
       </Text>
     </View>
@@ -132,71 +111,47 @@ export default function WorkOrdersScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Online Status Bar */}
+      {/* Online Banner */}
       {isOnline && (
-        <View style={styles.onlineStatusBar}>
-          <View style={styles.onlineStatusDot} />
-          <Text style={styles.onlineStatusText}>You are Online</Text>
-          <Text style={styles.onlineStatusSubtext}>Visible to customers</Text>
+        <View style={styles.onlineBanner}>
+          <View style={styles.onlineDot} />
+          <Text style={styles.onlineText}>You're Online</Text>
         </View>
       )}
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Work Orders</Text>
-        <TouchableOpacity style={styles.mapBtn}>
-          <Ionicons name="map" size={20} color={THEME.primary} />
-        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Jobs</Text>
       </View>
 
-      {/* Filters - Based on user's skills */}
-      <View style={styles.filtersContainer}>
-        <FlatList
-          horizontal
-          data={filterOptions}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filtersList}
-          keyExtractor={(item) => item.key || 'all'}
-          renderItem={({ item }) => {
-            const isActive = activeFilter === item.key;
-            const skillColor = item.key ? getSkillColor(item.key) : THEME.primary;
-            
-            return (
-              <TouchableOpacity
-                style={[
-                  styles.filterChip,
-                  isActive && { backgroundColor: skillColor, borderColor: skillColor },
-                ]}
-                onPress={() => setActiveFilter(item.key)}
-              >
-                <Text
-                  style={[
-                    styles.filterText,
-                    isActive && styles.filterTextActive,
-                  ]}
-                >
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          }}
-        />
-      </View>
-
-      {/* No Skills Message */}
-      {userSkills.length === 0 && (
-        <View style={styles.noSkillsMessage}>
-          <Ionicons name="information-circle" size={20} color={THEME.info} />
-          <Text style={styles.noSkillsText}>
-            Complete your profile to add skills and receive matching work orders
-          </Text>
-        </View>
-      )}
+      {/* Filters */}
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        style={styles.filtersContainer}
+        contentContainerStyle={styles.filtersContent}
+      >
+        {filterOptions.map((item) => {
+          const isActive = activeFilter === item.key;
+          return (
+            <TouchableOpacity
+              key={item.key || 'all'}
+              style={[styles.filterChip, isActive && styles.filterChipActive]}
+              onPress={() => setActiveFilter(item.key)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.filterText, isActive && styles.filterTextActive]}>
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
 
       {/* Jobs List */}
       {isLoading && !refreshing ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={THEME.primary} />
+          <ActivityIndicator size="large" color="#007AFF" />
         </View>
       ) : (
         <FlatList
@@ -207,11 +162,7 @@ export default function WorkOrdersScreen() {
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={renderEmptyState}
           refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={THEME.primary}
-            />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#007AFF" />
           }
         />
       )}
@@ -224,90 +175,60 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: THEME.background,
   },
-  onlineStatusBar: {
-    backgroundColor: THEME.success,
+  onlineBanner: {
+    backgroundColor: '#34C759',
     paddingVertical: 8,
-    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 6,
   },
-  onlineStatusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+  onlineDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: 'white',
   },
-  onlineStatusText: {
+  onlineText: {
     fontSize: 14,
     fontWeight: '600',
     color: 'white',
   },
-  onlineStatusSubtext: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.8)',
-  },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: THEME.spacing.md,
-    paddingVertical: THEME.spacing.md,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 34,
     fontWeight: '700',
     color: THEME.text,
-  },
-  mapBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: THEME.cardBg,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: THEME.cardBorder,
+    letterSpacing: -0.5,
   },
   filtersContainer: {
-    marginBottom: THEME.spacing.sm,
+    maxHeight: 50,
   },
-  filtersList: {
-    paddingHorizontal: THEME.spacing.md,
-    gap: THEME.spacing.sm,
+  filtersContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    gap: 8,
   },
   filterChip: {
-    paddingHorizontal: THEME.spacing.md,
-    paddingVertical: THEME.spacing.sm,
-    borderRadius: THEME.borderRadius.full,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
     backgroundColor: THEME.cardBg,
-    borderWidth: 1,
-    borderColor: THEME.cardBorder,
-    marginRight: THEME.spacing.sm,
+    marginRight: 8,
+  },
+  filterChipActive: {
+    backgroundColor: '#007AFF',
   },
   filterText: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '500',
-    color: THEME.textSecondary,
+    color: THEME.text,
   },
   filterTextActive: {
     color: 'white',
-  },
-  noSkillsMessage: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: THEME.info + '10',
-    marginHorizontal: THEME.spacing.md,
-    padding: THEME.spacing.md,
-    borderRadius: THEME.borderRadius.medium,
-    gap: THEME.spacing.sm,
-    marginBottom: THEME.spacing.sm,
-  },
-  noSkillsText: {
-    flex: 1,
-    fontSize: 13,
-    color: THEME.info,
   },
   loadingContainer: {
     flex: 1,
@@ -315,140 +236,123 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   listContent: {
-    padding: THEME.spacing.md,
-    paddingBottom: THEME.spacing.xxl,
+    padding: 20,
+    paddingBottom: 100,
   },
   jobCard: {
     backgroundColor: THEME.cardBg,
-    borderRadius: THEME.borderRadius.large,
-    padding: THEME.spacing.md,
-    marginBottom: THEME.spacing.md,
-    borderWidth: 1,
-    borderColor: THEME.cardBorder,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
   },
   jobHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: THEME.spacing.sm,
+    marginBottom: 12,
   },
-  serviceIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  serviceIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  jobHeaderInfo: {
+  jobInfo: {
     flex: 1,
-    marginLeft: THEME.spacing.sm,
+    marginLeft: 12,
   },
-  jobServiceType: {
-    fontSize: 16,
+  jobTitle: {
+    fontSize: 17,
     fontWeight: '600',
     color: THEME.text,
   },
-  distanceBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+  jobCustomer: {
+    fontSize: 15,
+    color: THEME.textMuted,
     marginTop: 2,
   },
-  distanceText: {
-    fontSize: 12,
-    color: THEME.textMuted,
-  },
   payBadge: {
-    backgroundColor: THEME.success + '15',
-    paddingHorizontal: THEME.spacing.sm,
-    paddingVertical: 4,
-    borderRadius: THEME.borderRadius.small,
+    backgroundColor: '#34C75915',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
   payAmount: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
-    color: THEME.success,
+    color: '#34C759',
   },
   jobDetails: {
     flexDirection: 'row',
-    gap: THEME.spacing.lg,
-    marginBottom: THEME.spacing.sm,
+    gap: 20,
+    marginBottom: 12,
   },
-  detailRow: {
+  detailItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
   detailText: {
-    fontSize: 13,
-    color: THEME.textSecondary,
-  },
-  jobFooter: {
-    paddingTop: THEME.spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: THEME.cardBorder,
-    marginBottom: THEME.spacing.sm,
+    fontSize: 14,
+    color: THEME.textMuted,
   },
   jobDescription: {
-    fontSize: 13,
+    fontSize: 15,
     color: THEME.textSecondary,
-    lineHeight: 18,
+    lineHeight: 20,
+    marginBottom: 16,
   },
   actionButtons: {
     flexDirection: 'row',
-    gap: THEME.spacing.sm,
+    gap: 12,
   },
   declineBtn: {
     flex: 1,
-    paddingVertical: THEME.spacing.sm,
-    borderRadius: THEME.borderRadius.medium,
-    backgroundColor: THEME.backgroundSecondary,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: THEME.background,
     alignItems: 'center',
   },
   declineBtnText: {
-    fontSize: 14,
+    fontSize: 17,
     fontWeight: '600',
     color: THEME.textSecondary,
   },
   acceptBtn: {
     flex: 1,
-    flexDirection: 'row',
-    paddingVertical: THEME.spacing.sm,
-    borderRadius: THEME.borderRadius.medium,
-    backgroundColor: THEME.success,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: '#007AFF',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
   },
   acceptBtnText: {
-    fontSize: 14,
+    fontSize: 17,
     fontWeight: '600',
     color: 'white',
   },
   emptyState: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: THEME.spacing.xxl * 2,
+    paddingVertical: 60,
   },
-  emptyIconContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: THEME.backgroundSecondary,
+  emptyIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: THEME.backgroundTertiary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: THEME.spacing.lg,
+    marginBottom: 16,
   },
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
     color: THEME.text,
-    marginBottom: THEME.spacing.sm,
+    marginBottom: 8,
   },
   emptySubtitle: {
-    fontSize: 14,
+    fontSize: 15,
     color: THEME.textMuted,
     textAlign: 'center',
-    paddingHorizontal: THEME.spacing.xl,
+    paddingHorizontal: 40,
   },
 });

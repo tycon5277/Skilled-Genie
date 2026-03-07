@@ -1,84 +1,88 @@
+// iOS-Style Theme for Skilled Genie App
+// Clean, minimal, professional design inspired by Apple's Human Interface Guidelines
+
 export const THEME = {
-  // Background colors - Clean, fresh white/light gray
-  background: '#F8FAFC',
-  backgroundSecondary: '#F1F5F9',
+  // Background colors - iOS system backgrounds
+  background: '#F2F2F7',           // iOS secondary system background
+  backgroundSecondary: '#FFFFFF',   // iOS primary background (for cards)
+  backgroundTertiary: '#E5E5EA',    // iOS tertiary background
   
-  // Card colors
+  // Card colors - Clean white cards
   cardBg: '#FFFFFF',
-  cardBorder: '#E2E8F0',
+  cardBorder: 'transparent',        // iOS cards typically don't have borders
   
-  // Primary colors (Calm Teal/Blue)
-  primary: '#0EA5E9',
-  primaryLight: '#38BDF8',
-  primaryDark: '#0284C7',
+  // Primary colors - iOS Blue
+  primary: '#007AFF',               // iOS system blue
+  primaryLight: '#5AC8FA',          // iOS system teal
+  primaryDark: '#0051A8',
   
-  // Secondary colors (Slate Blue)
-  secondary: '#6366F1',
-  secondaryLight: '#818CF8',
+  // Secondary colors
+  secondary: '#5856D6',             // iOS system purple
+  secondaryLight: '#AF52DE',        // iOS system pink-purple
   
-  // Accent (Fresh Green)
-  accent: '#10B981',
-  accentLight: '#34D399',
+  // Accent colors
+  accent: '#34C759',                // iOS system green
+  accentLight: '#30D158',
   
-  // Text colors - Professional slate tones
-  text: '#1E293B',
-  textSecondary: '#475569',
-  textMuted: '#94A3B8',
+  // Text colors - iOS system labels
+  text: '#000000',                  // iOS primary label
+  textSecondary: '#3C3C43',         // iOS secondary label (with 60% opacity typically)
+  textMuted: '#8E8E93',             // iOS tertiary/quaternary label
   textLight: '#FFFFFF',
   
-  // Status colors
-  error: '#EF4444',
-  success: '#10B981',
-  warning: '#F59E0B',
-  info: '#0EA5E9',
+  // Status colors - iOS system colors
+  error: '#FF3B30',                 // iOS system red
+  success: '#34C759',               // iOS system green
+  warning: '#FF9500',               // iOS system orange
+  info: '#007AFF',                  // iOS system blue
   
-  // Gradients - Modern, calm
-  gradientPrimary: ['#38BDF8', '#0EA5E9'],
-  gradientSecondary: ['#818CF8', '#6366F1'],
-  gradientAccent: ['#34D399', '#10B981'],
+  // iOS-style gradients
+  gradientPrimary: ['#007AFF', '#5856D6'],
+  gradientSecondary: ['#5AC8FA', '#007AFF'],
+  gradientAccent: ['#34C759', '#30D158'],
   
-  // Shadows
+  // iOS-style shadows (subtle, diffused)
   shadow: {
     small: {
-      shadowColor: '#64748B',
+      shadowColor: '#000000',
       shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.08,
-      shadowRadius: 2,
-      elevation: 2,
+      shadowOpacity: 0.04,
+      shadowRadius: 3,
+      elevation: 1,
     },
     medium: {
-      shadowColor: '#64748B',
+      shadowColor: '#000000',
       shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 4,
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
+      elevation: 3,
     },
     large: {
-      shadowColor: '#64748B',
+      shadowColor: '#000000',
       shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.15,
-      shadowRadius: 8,
-      elevation: 8,
+      shadowOpacity: 0.12,
+      shadowRadius: 16,
+      elevation: 6,
     },
   },
   
-  // Border radius
+  // iOS-style border radius
   borderRadius: {
     small: 8,
     medium: 12,
     large: 16,
-    xl: 24,
+    xl: 20,
     full: 9999,
   },
   
-  // Spacing
+  // iOS-style spacing (based on 8pt grid)
   spacing: {
     xs: 4,
     sm: 8,
     md: 16,
-    lg: 24,
-    xl: 32,
-    xxl: 48,
+    lg: 20,
+    xl: 28,
+    xxl: 44,
   },
 };
 
@@ -192,110 +196,110 @@ export const SERVICE_ICONS: { [key: string]: string } = {
   'other': 'construct',
 };
 
-// Service colors - Fresh, modern palette
+// iOS-inspired service colors
 export const SERVICE_COLORS: { [key: string]: string } = {
-  // Home Services - Green tones
-  'general_cleaning': '#10B981',
-  'deep_cleaning': '#059669',
-  'kitchen_cleaning': '#14B8A6',
-  'bathroom_cleaning': '#06B6D4',
-  'window_cleaning': '#22D3EE',
-  'carpet_cleaning': '#0EA5E9',
-  'move_in_out_cleaning': '#0284C7',
+  // Home Services - Green/Teal
+  'general_cleaning': '#34C759',
+  'deep_cleaning': '#30D158',
+  'kitchen_cleaning': '#00C7BE',
+  'bathroom_cleaning': '#5AC8FA',
+  'window_cleaning': '#64D2FF',
+  'carpet_cleaning': '#007AFF',
+  'move_in_out_cleaning': '#0A84FF',
   
-  // Repair & Maintenance - Blue tones
-  'plumbing': '#0EA5E9',
-  'electrical': '#F59E0B',
-  'ac_repair': '#06B6D4',
-  'appliance_repair': '#6366F1',
-  'carpentry': '#8B5CF6',
-  'painting': '#EC4899',
-  'handyman': '#64748B',
+  // Repair & Maintenance - Blue/Orange
+  'plumbing': '#007AFF',
+  'electrical': '#FF9500',
+  'ac_repair': '#5AC8FA',
+  'appliance_repair': '#5856D6',
+  'carpentry': '#AF52DE',
+  'painting': '#FF2D55',
+  'handyman': '#8E8E93',
   
-  // Driver - Slate tones
-  'personal_driver': '#475569',
-  'outstation_driver': '#64748B',
-  'corporate_driver': '#334155',
+  // Driver - Gray/Blue
+  'personal_driver': '#636366',
+  'outstation_driver': '#8E8E93',
+  'corporate_driver': '#48484A',
   
-  // Vehicle - Purple tones
-  'luxury_car': '#8B5CF6',
-  'suv_rental': '#7C3AED',
-  'vintage_car': '#A855F7',
+  // Vehicle - Purple
+  'luxury_car': '#5856D6',
+  'suv_rental': '#AF52DE',
+  'vintage_car': '#BF5AF2',
   
-  // Photography - Rose tones
-  'wedding_photography': '#EC4899',
-  'event_photography': '#F472B6',
-  'portrait_photography': '#DB2777',
-  'product_photography': '#BE185D',
-  'videography': '#9D174D',
+  // Photography - Pink/Red
+  'wedding_photography': '#FF2D55',
+  'event_photography': '#FF375F',
+  'portrait_photography': '#FF453A',
+  'product_photography': '#D70015',
+  'videography': '#FF3B30',
   
-  // Beauty - Pink/Rose
-  'hair_styling': '#EC4899',
-  'makeup': '#F472B6',
-  'nail_art': '#E879F9',
-  'spa_services': '#C084FC',
-  'bridal_services': '#DB2777',
+  // Beauty - Pink
+  'hair_styling': '#FF2D55',
+  'makeup': '#FF375F',
+  'nail_art': '#BF5AF2',
+  'spa_services': '#AF52DE',
+  'bridal_services': '#FF2D55',
   
-  // Fitness - Orange/Amber
-  'personal_trainer': '#F59E0B',
-  'yoga_instructor': '#FBBF24',
-  'nutritionist': '#10B981',
-  'physiotherapist': '#06B6D4',
+  // Fitness - Orange/Green
+  'personal_trainer': '#FF9500',
+  'yoga_instructor': '#FFCC00',
+  'nutritionist': '#34C759',
+  'physiotherapist': '#5AC8FA',
   
-  // Pet Care - Warm tones
-  'dog_walking': '#F97316',
-  'pet_grooming': '#FB923C',
-  'pet_sitting': '#FBBF24',
-  'pet_training': '#F59E0B',
+  // Pet Care - Orange
+  'dog_walking': '#FF9500',
+  'pet_grooming': '#FF9F0A',
+  'pet_sitting': '#FFCC00',
+  'pet_training': '#FFD60A',
   
-  // Events - Vibrant
-  'party_planning': '#8B5CF6',
-  'wedding_planning': '#EC4899',
-  'catering': '#F59E0B',
-  'decoration': '#06B6D4',
-  'dj_services': '#6366F1',
+  // Events - Purple/Pink
+  'party_planning': '#5856D6',
+  'wedding_planning': '#FF2D55',
+  'catering': '#FF9500',
+  'decoration': '#5AC8FA',
+  'dj_services': '#AF52DE',
   
-  // Education - Blue tones
-  'academic_tutoring': '#3B82F6',
-  'music_lessons': '#8B5CF6',
-  'language_tutoring': '#06B6D4',
-  'art_classes': '#EC4899',
-  'test_prep': '#6366F1',
+  // Education - Blue
+  'academic_tutoring': '#007AFF',
+  'music_lessons': '#5856D6',
+  'language_tutoring': '#5AC8FA',
+  'art_classes': '#FF2D55',
+  'test_prep': '#AF52DE',
   
-  // Professional - Slate/Blue
-  'accounting': '#64748B',
-  'legal_consultation': '#475569',
-  'tax_services': '#334155',
-  'business_consulting': '#0EA5E9',
+  // Professional - Gray/Blue
+  'accounting': '#8E8E93',
+  'legal_consultation': '#636366',
+  'tax_services': '#48484A',
+  'business_consulting': '#007AFF',
   
   // Tech - Blue/Purple
-  'computer_repair': '#6366F1',
-  'phone_repair': '#8B5CF6',
-  'network_setup': '#0EA5E9',
-  'data_recovery': '#06B6D4',
-  'software_help': '#3B82F6',
+  'computer_repair': '#5856D6',
+  'phone_repair': '#AF52DE',
+  'network_setup': '#007AFF',
+  'data_recovery': '#5AC8FA',
+  'software_help': '#0A84FF',
   
   // Gardening - Green
-  'lawn_care': '#22C55E',
-  'plant_care': '#10B981',
-  'landscaping': '#059669',
-  'tree_trimming': '#047857',
+  'lawn_care': '#34C759',
+  'plant_care': '#30D158',
+  'landscaping': '#00C7BE',
+  'tree_trimming': '#32ADE6',
   
-  // Elderly Care - Warm, caring
-  'companion_care': '#EC4899',
-  'medical_assistance': '#EF4444',
-  'daily_assistance': '#F59E0B',
-  'mobility_support': '#06B6D4',
+  // Elderly Care - Warm
+  'companion_care': '#FF2D55',
+  'medical_assistance': '#FF3B30',
+  'daily_assistance': '#FF9500',
+  'mobility_support': '#5AC8FA',
   
-  // Delivery - Orange
-  'grocery_delivery': '#F97316',
-  'food_delivery': '#FB923C',
-  'package_delivery': '#64748B',
-  'document_delivery': '#475569',
+  // Delivery - Orange/Gray
+  'grocery_delivery': '#FF9500',
+  'food_delivery': '#FF9F0A',
+  'package_delivery': '#8E8E93',
+  'document_delivery': '#636366',
   
   // Fallback
-  'default': '#0EA5E9',
-  'other': '#64748B',
+  'default': '#007AFF',
+  'other': '#8E8E93',
 };
 
 // Helper to get icon for a skill

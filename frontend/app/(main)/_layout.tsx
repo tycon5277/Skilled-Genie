@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Tabs, router } from 'expo-router';
-import { View, Text, StyleSheet, Platform, BackHandler, ToastAndroid } from 'react-native';
+import { View, StyleSheet, Platform, BackHandler, ToastAndroid } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -8,18 +8,17 @@ import { useServiceStore } from '../../src/stores/serviceStore';
 import { NewJobAlertModal } from '../../src/components/NewJobAlertModal';
 import { THEME } from '../../src/theme';
 
-// Fresh, modern, calm, professional tab bar theme
+// iOS-style Tab Bar Theme
 const TAB_THEME = {
   tabBarBackground: '#FFFFFF',
-  tabBarBorder: '#E2E8F0',
-  tabBarActive: '#0EA5E9',      // Calm teal/sky blue
-  tabBarInactive: '#94A3B8',    // Soft gray
-  iconActiveBackground: '#0EA5E915',
+  tabBarBorder: '#C6C6C8',        // iOS separator color
+  tabBarActive: '#007AFF',        // iOS blue
+  tabBarInactive: '#8E8E93',      // iOS gray
 };
 
 export default function MainLayout() {
   const insets = useSafeAreaInsets();
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
   const {
     fetchAvailableJobs,
     fetchActiveJobs,
@@ -58,7 +57,7 @@ export default function MainLayout() {
       if (backPressCount === 0) {
         setBackPressCount(1);
         if (Platform.OS === 'android') {
-          ToastAndroid.show('Press back again to go offline & exit', ToastAndroid.SHORT);
+          ToastAndroid.show('Press back again to exit', ToastAndroid.SHORT);
         }
         setTimeout(() => setBackPressCount(0), 2000);
         return true;
@@ -81,16 +80,11 @@ export default function MainLayout() {
 
   const renderTabIcon = (name: string, focused: boolean) => {
     return (
-      <View style={[
-        styles.tabIconContainer,
-        focused && styles.tabIconContainerActive
-      ]}>
-        <Ionicons
-          name={name as any}
-          size={22}
-          color={focused ? TAB_THEME.tabBarActive : TAB_THEME.tabBarInactive}
-        />
-      </View>
+      <Ionicons
+        name={name as any}
+        size={24}
+        color={focused ? TAB_THEME.tabBarActive : TAB_THEME.tabBarInactive}
+      />
     );
   };
 
@@ -101,23 +95,18 @@ export default function MainLayout() {
           headerShown: false,
           tabBarStyle: {
             backgroundColor: TAB_THEME.tabBarBackground,
-            borderTopWidth: 1,
+            borderTopWidth: 0.5,
             borderTopColor: TAB_THEME.tabBarBorder,
-            height: 56 + insets.bottom,
-            paddingBottom: insets.bottom + 4,
-            paddingTop: 8,
-            shadowColor: '#64748B',
-            shadowOffset: { width: 0, height: -2 },
-            shadowOpacity: 0.05,
-            shadowRadius: 4,
-            elevation: 2,
+            height: 49 + insets.bottom,  // iOS standard tab bar height
+            paddingBottom: insets.bottom,
+            paddingTop: 0,
           },
           tabBarActiveTintColor: TAB_THEME.tabBarActive,
           tabBarInactiveTintColor: TAB_THEME.tabBarInactive,
           tabBarLabelStyle: {
             fontSize: 10,
-            fontWeight: '600',
-            marginTop: 2,
+            fontWeight: '500',
+            marginTop: -2,
           },
         }}
       >
@@ -126,7 +115,14 @@ export default function MainLayout() {
           name="index"
           options={{
             title: 'Home',
-            tabBarIcon: ({ focused }) => renderTabIcon(focused ? 'home' : 'home-outline', focused),
+            tabBarIcon: ({ focused }) => renderTabIcon(focused ? 'house.fill' : 'house', focused),
+            tabBarIcon: ({ focused }) => (
+              <Ionicons 
+                name={focused ? 'home' : 'home-outline'} 
+                size={24} 
+                color={focused ? TAB_THEME.tabBarActive : TAB_THEME.tabBarInactive} 
+              />
+            ),
           }}
         />
         
@@ -134,8 +130,14 @@ export default function MainLayout() {
         <Tabs.Screen
           name="work-orders"
           options={{
-            title: 'Work Orders',
-            tabBarIcon: ({ focused }) => renderTabIcon(focused ? 'briefcase' : 'briefcase-outline', focused),
+            title: 'Jobs',
+            tabBarIcon: ({ focused }) => (
+              <Ionicons 
+                name={focused ? 'briefcase' : 'briefcase-outline'} 
+                size={24} 
+                color={focused ? TAB_THEME.tabBarActive : TAB_THEME.tabBarInactive} 
+              />
+            ),
           }}
         />
         
@@ -144,7 +146,13 @@ export default function MainLayout() {
           name="schedule"
           options={{
             title: 'Schedule',
-            tabBarIcon: ({ focused }) => renderTabIcon(focused ? 'calendar' : 'calendar-outline', focused),
+            tabBarIcon: ({ focused }) => (
+              <Ionicons 
+                name={focused ? 'calendar' : 'calendar-outline'} 
+                size={24} 
+                color={focused ? TAB_THEME.tabBarActive : TAB_THEME.tabBarInactive} 
+              />
+            ),
           }}
         />
         
@@ -153,24 +161,24 @@ export default function MainLayout() {
           name="profile"
           options={{
             title: 'Profile',
-            tabBarIcon: ({ focused }) => renderTabIcon(focused ? 'person' : 'person-outline', focused),
+            tabBarIcon: ({ focused }) => (
+              <Ionicons 
+                name={focused ? 'person-circle' : 'person-circle-outline'} 
+                size={26} 
+                color={focused ? TAB_THEME.tabBarActive : TAB_THEME.tabBarInactive} 
+              />
+            ),
           }}
         />
         
-        {/* Hidden screens - not in tab bar */}
+        {/* Hidden screens */}
         <Tabs.Screen
           name="active-job"
-          options={{
-            href: null,
-          }}
+          options={{ href: null }}
         />
-        
-        {/* Hide old jobs screen if it exists */}
         <Tabs.Screen
           name="jobs"
-          options={{
-            href: null,
-          }}
+          options={{ href: null }}
         />
       </Tabs>
 
@@ -185,15 +193,4 @@ export default function MainLayout() {
   );
 }
 
-const styles = StyleSheet.create({
-  tabIconContainer: {
-    width: 40,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  tabIconContainerActive: {
-    backgroundColor: TAB_THEME.iconActiveBackground,
-  },
-});
+const styles = StyleSheet.create({});

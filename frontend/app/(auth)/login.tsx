@@ -11,7 +11,6 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -55,11 +54,9 @@ export default function LoginScreen() {
     setLoading(false);
     
     if (result === 'login') {
-      // Existing user - go to main app
       router.replace('/(main)');
     } else if (result === 'register') {
-      // New user - go to registration
-      router.replace('/(auth)/register');
+      router.replace('/(auth)/skilled-setup');
     } else {
       Alert.alert('Error', error || 'Invalid OTP. Please try again.');
     }
@@ -76,90 +73,89 @@ export default function LoginScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
-        {/* Header */}
+        {/* iOS-style Header */}
         <View style={styles.header}>
-          <LinearGradient
-            colors={THEME.gradientPrimary as any}
-            style={styles.logoContainer}
-          >
-            <Ionicons name="construct" size={48} color="white" />
-          </LinearGradient>
+          <View style={styles.logoContainer}>
+            <Ionicons name="construct" size={44} color="#007AFF" />
+          </View>
           <Text style={styles.title}>Skilled Genie</Text>
           <Text style={styles.subtitle}>Service Partner App</Text>
         </View>
 
-        {/* Form */}
+        {/* iOS-style Form */}
         <View style={styles.form}>
           {step === 'phone' ? (
             <>
-              <Text style={styles.label}>Enter your phone number</Text>
-              <View style={styles.inputContainer}>
-                <Ionicons name="call-outline" size={20} color={THEME.textMuted} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Phone number"
-                  placeholderTextColor={THEME.textMuted}
-                  value={phone}
-                  onChangeText={setPhone}
-                  keyboardType="phone-pad"
-                  maxLength={15}
-                  autoFocus
-                />
+              <Text style={styles.sectionHeader}>SIGN IN</Text>
+              <View style={styles.card}>
+                <View style={styles.inputRow}>
+                  <Ionicons name="call" size={20} color="#007AFF" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Phone Number"
+                    placeholderTextColor="#8E8E93"
+                    value={phone}
+                    onChangeText={setPhone}
+                    keyboardType="phone-pad"
+                    maxLength={15}
+                    autoFocus
+                  />
+                </View>
               </View>
               
               <TouchableOpacity
                 style={[styles.button, phone.length < 10 && styles.buttonDisabled]}
                 onPress={handleSendOTP}
                 disabled={phone.length < 10 || loading}
-                activeOpacity={0.8}
+                activeOpacity={0.7}
               >
                 {loading ? (
                   <ActivityIndicator color="white" />
                 ) : (
-                  <>
-                    <Text style={styles.buttonText}>Send OTP</Text>
-                    <Ionicons name="arrow-forward" size={20} color="white" />
-                  </>
+                  <Text style={styles.buttonText}>Continue</Text>
                 )}
               </TouchableOpacity>
             </>
           ) : (
             <>
               <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-                <Ionicons name="arrow-back" size={24} color={THEME.text} />
+                <Ionicons name="chevron-back" size={28} color="#007AFF" />
+                <Text style={styles.backText}>Back</Text>
               </TouchableOpacity>
               
-              <Text style={styles.label}>Enter OTP</Text>
-              <Text style={styles.phoneDisplay}>Sent to {phone}</Text>
+              <Text style={styles.sectionHeader}>VERIFICATION</Text>
+              <Text style={styles.verifySubtext}>
+                Enter the 6-digit code sent to {phone}
+              </Text>
               
-              <View style={styles.inputContainer}>
-                <Ionicons name="keypad-outline" size={20} color={THEME.textMuted} />
-                <TextInput
-                  ref={otpInputRef}
-                  style={styles.input}
-                  placeholder="6-digit OTP"
-                  placeholderTextColor={THEME.textMuted}
-                  value={otp}
-                  onChangeText={setOtp}
-                  keyboardType="number-pad"
-                  maxLength={6}
-                />
+              <View style={styles.card}>
+                <View style={styles.inputRow}>
+                  <Ionicons name="keypad" size={20} color="#007AFF" style={styles.inputIcon} />
+                  <TextInput
+                    ref={otpInputRef}
+                    style={styles.input}
+                    placeholder="000000"
+                    placeholderTextColor="#8E8E93"
+                    value={otp}
+                    onChangeText={setOtp}
+                    keyboardType="number-pad"
+                    maxLength={6}
+                  />
+                </View>
               </View>
+              
               <Text style={styles.hint}>Use 123456 for testing</Text>
               
               <TouchableOpacity
                 style={[styles.button, otp.length !== 6 && styles.buttonDisabled]}
                 onPress={handleVerifyOTP}
                 disabled={otp.length !== 6 || loading}
-                activeOpacity={0.8}
+                activeOpacity={0.7}
               >
                 {loading ? (
                   <ActivityIndicator color="white" />
                 ) : (
-                  <>
-                    <Text style={styles.buttonText}>Verify OTP</Text>
-                    <Ionicons name="checkmark-circle" size={20} color="white" />
-                  </>
+                  <Text style={styles.buttonText}>Verify</Text>
                 )}
               </TouchableOpacity>
             </>
@@ -184,95 +180,109 @@ const styles = StyleSheet.create({
   },
   keyboardView: {
     flex: 1,
-    padding: THEME.spacing.lg,
   },
   header: {
     alignItems: 'center',
-    marginTop: THEME.spacing.xxl,
-    marginBottom: THEME.spacing.xl,
+    paddingTop: 60,
+    paddingBottom: 40,
   },
   logoContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: THEME.borderRadius.xl,
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    backgroundColor: '#007AFF15',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: THEME.spacing.md,
-    ...THEME.shadow.large,
+    marginBottom: 16,
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '700',
     color: THEME.text,
-    marginBottom: THEME.spacing.xs,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 16,
-    color: THEME.textSecondary,
+    fontSize: 15,
+    color: THEME.textMuted,
+    marginTop: 4,
   },
   form: {
     flex: 1,
+    paddingHorizontal: 20,
   },
-  backButton: {
-    marginBottom: THEME.spacing.md,
+  sectionHeader: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: THEME.textMuted,
+    marginBottom: 8,
+    marginLeft: 16,
+    letterSpacing: 0.5,
   },
-  label: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: THEME.text,
-    marginBottom: THEME.spacing.sm,
-  },
-  phoneDisplay: {
-    fontSize: 14,
+  verifySubtext: {
+    fontSize: 15,
     color: THEME.textSecondary,
-    marginBottom: THEME.spacing.md,
+    marginBottom: 20,
+    marginLeft: 16,
   },
-  inputContainer: {
+  card: {
+    backgroundColor: THEME.cardBg,
+    borderRadius: 12,
+    marginBottom: 20,
+    overflow: 'hidden',
+  },
+  inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: THEME.cardBg,
-    borderRadius: THEME.borderRadius.medium,
-    borderWidth: 1,
-    borderColor: THEME.cardBorder,
-    paddingHorizontal: THEME.spacing.md,
-    marginBottom: THEME.spacing.sm,
+    paddingHorizontal: 16,
+    minHeight: 50,
+  },
+  inputIcon: {
+    marginRight: 12,
   },
   input: {
     flex: 1,
-    paddingVertical: THEME.spacing.md,
-    paddingHorizontal: THEME.spacing.sm,
-    fontSize: 18,
+    fontSize: 17,
     color: THEME.text,
+    paddingVertical: 14,
   },
   hint: {
-    fontSize: 12,
+    fontSize: 13,
     color: THEME.textMuted,
-    marginBottom: THEME.spacing.lg,
+    textAlign: 'center',
+    marginBottom: 20,
   },
   button: {
-    flexDirection: 'row',
+    backgroundColor: '#007AFF',
+    borderRadius: 12,
+    paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: THEME.primary,
-    paddingVertical: THEME.spacing.md,
-    borderRadius: THEME.borderRadius.medium,
-    gap: THEME.spacing.sm,
-    ...THEME.shadow.medium,
   },
   buttonDisabled: {
-    backgroundColor: THEME.textMuted,
+    backgroundColor: '#8E8E93',
   },
   buttonText: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '600',
     color: 'white',
   },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    marginLeft: -8,
+  },
+  backText: {
+    fontSize: 17,
+    color: '#007AFF',
+  },
   footer: {
     alignItems: 'center',
-    paddingBottom: THEME.spacing.lg,
+    paddingVertical: 20,
+    paddingHorizontal: 40,
   },
   footerText: {
-    fontSize: 12,
+    fontSize: 13,
     color: THEME.textMuted,
     textAlign: 'center',
   },
