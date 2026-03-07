@@ -18,13 +18,16 @@ export interface GenieProfile {
 interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
+  needsRegistration: boolean;
+  pendingPhone: string | null;
   user: GenieProfile | null;
   error: string | null;
   
   // Actions
   initialize: () => Promise<void>;
   sendOTP: (phone: string) => Promise<boolean>;
-  verifyOTP: (phone: string, otp: string) => Promise<boolean>;
+  verifyOTP: (phone: string, otp: string) => Promise<'login' | 'register' | 'error'>;
+  register: (phone: string, name: string, skills: string[]) => Promise<boolean>;
   logout: () => Promise<void>;
   updateProfile: (data: Partial<GenieProfile>) => Promise<boolean>;
   refreshProfile: () => Promise<void>;
@@ -33,6 +36,8 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   isLoading: true,
+  needsRegistration: false,
+  pendingPhone: null,
   user: null,
   error: null,
 
@@ -50,6 +55,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               isAuthenticated: true, 
               user: response.data.genie,
               isLoading: false,
+              needsRegistration: false,
               error: null
             });
             return;
@@ -60,9 +66,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
       }
       
-      set({ isAuthenticated: false, user: null, isLoading: false });
+      set({ isAuthenticated: false, user: null, isLoading: false, needsRegistration: false });
     } catch (error) {
-      set({ isAuthenticated: false, user: null, isLoading: false });
+      set({ isAuthenticated: false, user: null, isLoading: false, needsRegistration: false });
     }
   },
 
@@ -83,6 +89,49 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ error: null, isLoading: true });
       const response = await skilledGenieAPI.verifyOTP(phone, otp);
       
+      if (response.data.success) {
+        if (response.data.session_token && response.data.genie) {
+          // Existing user - login successful
+          await setAuthToken(response.data.session_token);
+          await AsyncStorage.setItem('user_phone', phone);
+          
+          set({
+            isAuthenticated: true,
+            user: response.data.genie,
+            isLoading: false,
+            needsRegistration: false,
+            pendingPhone: null,
+            error: null
+          });
+          return 'login';
+        } else {
+          // New user - needs registration
+          set({
+            isLoading: false,
+            needsRegistration: true,
+            pendingPhone: phone,
+            error: null
+          });
+          return 'register';
+        }
+      }
+      
+      set({ isLoading: false });
+      return 'error';
+    } catch (error: any) {
+      set({ 
+        error: error.response?.data?.detail || 'Invalid OTP',
+        isLoading: false
+      });
+      return 'error';
+    }
+  },
+
+  register: async (phone: string, name: string, skills: string[]) => {
+    try {
+      set({ error: null, isLoading: true });
+      const response = await skilledGenieAPI.register(phone, name, skills);
+      
       if (response.data.success && response.data.session_token) {
         await setAuthToken(response.data.session_token);
         await AsyncStorage.setItem('user_phone', phone);
@@ -91,6 +140,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isAuthenticated: true,
           user: response.data.genie,
           isLoading: false,
+          needsRegistration: false,
+          pendingPhone: null,
           error: null
         });
         return true;
@@ -100,7 +151,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return false;
     } catch (error: any) {
       set({ 
-        error: error.response?.data?.detail || 'Invalid OTP',
+        error: error.response?.data?.detail || 'Registration failed',
         isLoading: false
       });
       return false;
@@ -112,6 +163,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({
       isAuthenticated: false,
       user: null,
+      needsRegistration: false,
+      pendingPhone: null,
       error: null
     });
   },

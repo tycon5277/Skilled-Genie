@@ -148,93 +148,16 @@ async def get_current_genie(credentials: HTTPAuthorizationCredentials = Depends(
     
     return genie
 
-# =============== SEED MOCK DATA ===============
-
-async def seed_mock_jobs():
-    """Seed some mock jobs for testing"""
-    existing_jobs = await db.jobs.count_documents({})
-    if existing_jobs > 0:
-        return
-    
-    service_types = ["plumbing", "electrical", "cleaning", "carpentry", "painting"]
-    descriptions = {
-        "plumbing": ["Fix leaking faucet", "Unclog drain", "Install new shower head", "Repair toilet", "Fix water heater"],
-        "electrical": ["Install ceiling fan", "Fix power outlet", "Replace light switch", "Electrical inspection", "Install doorbell"],
-        "cleaning": ["Deep house cleaning", "Post-renovation cleanup", "Office cleaning", "Window cleaning", "Carpet cleaning"],
-        "carpentry": ["Fix door hinge", "Build shelf", "Repair cabinet", "Install door", "Fix wooden floor"],
-        "painting": ["Paint bedroom", "Touch up walls", "Paint exterior", "Paint kitchen", "Wallpaper installation"]
-    }
-    names = ["John Smith", "Sarah Johnson", "Mike Davis", "Emily Brown", "Chris Wilson", "Lisa Anderson", "David Martinez", "Jennifer Taylor"]
-    addresses = [
-        "123 Main St, Downtown", "456 Oak Ave, Westside", "789 Pine Rd, Eastville",
-        "321 Elm St, Northpark", "654 Maple Dr, Southview", "987 Cedar Ln, Midtown"
-    ]
-    
-    mock_jobs = []
-    for i in range(10):
-        service_type = random.choice(service_types)
-        job = {
-            "job_id": str(uuid.uuid4()),
-            "service_type": service_type,
-            "status": "available",
-            "customer": {
-                "name": random.choice(names),
-                "phone": f"+1555***{random.randint(1000, 9999)}",
-                "address": random.choice(addresses),
-                "location": {"lat": 37.7749 + random.uniform(-0.05, 0.05), "lng": -122.4194 + random.uniform(-0.05, 0.05)}
-            },
-            "description": random.choice(descriptions[service_type]),
-            "estimated_duration": random.choice([30, 45, 60, 90, 120]),
-            "estimated_pay": round(random.uniform(50, 250), 2),
-            "distance_km": round(random.uniform(0.5, 15), 1),
-            "created_at": datetime.utcnow() - timedelta(minutes=random.randint(5, 60)),
-            "scheduled_time": None,
-            "assigned_genie_id": None
-        }
-        mock_jobs.append(job)
-    
-    await db.jobs.insert_many(mock_jobs)
-    logger.info(f"Seeded {len(mock_jobs)} mock jobs")
-
-async def seed_mock_ratings(genie_id: str):
-    """Seed mock ratings for a genie"""
-    existing_ratings = await db.ratings.count_documents({"genie_id": genie_id})
-    if existing_ratings > 0:
-        return
-    
-    comments = [
-        "Great service! Very professional.",
-        "On time and did excellent work.",
-        "Would recommend to anyone.",
-        "Friendly and efficient.",
-        "Very knowledgeable and helpful.",
-        None,  # Some ratings without comments
-        "Solved the problem quickly!",
-        "Best service I've had in years."
-    ]
-    names = ["John S.", "Sarah J.", "Mike D.", "Emily B.", "Chris W.", "Lisa A."]
-    service_types = ["plumbing", "electrical", "cleaning", "carpentry", "painting"]
-    
-    mock_ratings = []
-    for i in range(15):
-        rating = {
-            "rating_id": str(uuid.uuid4()),
-            "genie_id": genie_id,
-            "job_id": str(uuid.uuid4()),
-            "customer_name": random.choice(names),
-            "rating": round(random.uniform(4.0, 5.0), 1),
-            "comment": random.choice(comments),
-            "service_type": random.choice(service_types),
-            "created_at": datetime.utcnow() - timedelta(days=random.randint(1, 30))
-        }
-        mock_ratings.append(rating)
-    
-    await db.ratings.insert_many(mock_ratings)
-    logger.info(f"Seeded {len(mock_ratings)} mock ratings for genie {genie_id}")
+# =============== STARTUP ===============
 
 @app.on_event("startup")
 async def startup_event():
-    await seed_mock_jobs()
+    # Create indexes for better performance
+    await db.genies.create_index("phone", unique=True)
+    await db.genies.create_index("genie_id", unique=True)
+    await db.jobs.create_index("status")
+    await db.jobs.create_index("assigned_genie_id")
+    logger.info("Database indexes created")
 
 # =============== AUTH ROUTES ===============
 
@@ -260,36 +183,67 @@ async def verify_otp(request: OTPVerify):
         if not stored_otp or stored_otp.get("otp") != request.otp:
             raise HTTPException(status_code=401, detail="Invalid OTP")
     
-    # Find or create genie profile
+    # Check if genie exists
     genie = await db.genies.find_one({"phone": request.phone})
     
-    if not genie:
-        # Create new genie profile
-        new_genie = GenieProfile(
-            phone=request.phone,
-            name=f"Genie {request.phone[-4:]}",
-            skills=[],
-            rating=5.0,
-            total_jobs=random.randint(10, 100),  # Mock data
-            total_earnings=round(random.uniform(1000, 10000), 2)
+    if genie:
+        # Existing user - generate token and return
+        token = create_token(genie["genie_id"], genie["phone"])
+        genie_response = {k: v for k, v in genie.items() if k != "_id"}
+        return AuthResponse(
+            success=True,
+            session_token=token,
+            genie=genie_response,
+            message="Login successful"
         )
-        genie_dict = new_genie.dict()
-        await db.genies.insert_one(genie_dict)
-        genie = genie_dict
-        # Seed mock ratings for new genie
-        await seed_mock_ratings(genie["genie_id"])
+    else:
+        # New user - return success but indicate registration needed
+        return AuthResponse(
+            success=True,
+            session_token=None,
+            genie=None,
+            message="OTP verified. Please complete registration."
+        )
+
+class RegistrationRequest(BaseModel):
+    phone: str
+    name: str
+    skills: List[str]
+
+@api_router.post("/auth/register", response_model=AuthResponse)
+async def register_genie(request: RegistrationRequest):
+    """Register a new genie after OTP verification"""
+    # Check if already registered
+    existing = await db.genies.find_one({"phone": request.phone})
+    if existing:
+        raise HTTPException(status_code=400, detail="Phone number already registered")
+    
+    # Create new genie profile
+    new_genie = GenieProfile(
+        phone=request.phone,
+        name=request.name,
+        skills=request.skills,
+        rating=0.0,  # No rating yet
+        total_jobs=0,
+        total_earnings=0.0,
+        is_online=False
+    )
+    genie_dict = new_genie.dict()
+    await db.genies.insert_one(genie_dict)
     
     # Generate JWT token
-    token = create_token(genie["genie_id"], genie["phone"])
+    token = create_token(genie_dict["genie_id"], genie_dict["phone"])
     
-    # Remove MongoDB _id for response
-    genie_response = {k: v for k, v in genie.items() if k != "_id"}
+    logger.info(f"New genie registered: {request.name} ({request.phone})")
+    
+    # Remove any non-serializable fields
+    genie_response = {k: v for k, v in genie_dict.items() if k != "_id"}
     
     return AuthResponse(
         success=True,
         session_token=token,
         genie=genie_response,
-        message="Authentication successful"
+        message="Registration successful"
     )
 
 # =============== GENIE ROUTES ===============

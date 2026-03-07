@@ -8,9 +8,11 @@ export default function AuthLayout() {
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: THEME.background },
+        animation: 'slide_from_right',
       }}
     >
       <Stack.Screen name="login" />
+      <Stack.Screen name="register" />
     </Stack>
   );
 }

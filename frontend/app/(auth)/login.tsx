@@ -51,11 +51,15 @@ export default function LoginScreen() {
     }
     
     setLoading(true);
-    const success = await verifyOTP(phone, otp);
+    const result = await verifyOTP(phone, otp);
     setLoading(false);
     
-    if (success) {
+    if (result === 'login') {
+      // Existing user - go to main app
       router.replace('/(main)');
+    } else if (result === 'register') {
+      // New user - go to registration
+      router.replace('/(auth)/register');
     } else {
       Alert.alert('Error', error || 'Invalid OTP. Please try again.');
     }
@@ -102,7 +106,6 @@ export default function LoginScreen() {
                   autoFocus
                 />
               </View>
-              <Text style={styles.hint}>Use 7777777777 or 1111111111 for testing</Text>
               
               <TouchableOpacity
                 style={[styles.button, phone.length < 10 && styles.buttonDisabled]}
@@ -154,7 +157,7 @@ export default function LoginScreen() {
                   <ActivityIndicator color="white" />
                 ) : (
                   <>
-                    <Text style={styles.buttonText}>Verify & Login</Text>
+                    <Text style={styles.buttonText}>Verify OTP</Text>
                     <Ionicons name="checkmark-circle" size={20} color="white" />
                   </>
                 )}
