@@ -56,7 +56,7 @@ export default function LoginScreen() {
     if (result === 'login') {
       router.replace('/(main)');
     } else if (result === 'register') {
-      router.replace('/(auth)/skilled-setup');
+      router.replace('/(auth)/register');
     } else {
       Alert.alert('Error', error || 'Invalid OTP. Please try again.');
     }
