@@ -8,14 +8,15 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-  Animated,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuthStore } from '../../src/stores/authStore';
 import { THEME } from '../../src/theme';
 import {
@@ -25,9 +26,16 @@ import {
 } from '../../src/data/skillCategories';
 
 const STEPS = [
-  { id: 1, title: 'Skills', icon: 'construct' },
-  { id: 2, title: 'Experience', icon: 'trophy' },
-  { id: 3, title: 'Profile', icon: 'person' },
+  { id: 1, title: 'Details', icon: 'person' },
+  { id: 2, title: 'Skills', icon: 'construct' },
+  { id: 3, title: 'Experience', icon: 'trophy' },
+  { id: 4, title: 'Profile', icon: 'sparkles' },
+];
+
+const GENDER_OPTIONS = [
+  { id: 'male', label: 'Male', icon: 'male' },
+  { id: 'female', label: 'Female', icon: 'female' },
+  { id: 'other', label: 'Other', icon: 'person' },
 ];
 
 export default function RegisterScreen() {
@@ -36,25 +44,50 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  // Step 1: Skills
+  // Step 1: Personal Details
   const [name, setName] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [gender, setGender] = useState<string | null>(null);
+  const [aadhaarCard, setAadhaarCard] = useState('');
+  const [panCard, setPanCard] = useState('');
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+
+  // Step 2: Skills
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
-  // Step 2: Experience
+  // Step 3: Experience
   const [experienceLevel, setExperienceLevel] = useState<string | null>(null);
 
-  // Step 3: Service Area - REMOVED
-
-  // Step 3: Profile (was Step 4)
+  // Step 4: Profile
   const [bio, setBio] = useState('');
   const [socialLinks, setSocialLinks] = useState<{ [key: string]: string }>({});
   const [certifications, setCertifications] = useState<string[]>([]);
   const [newCertification, setNewCertification] = useState('');
-  const [profileTab, setProfileTab] = useState<'bio' | 'social' | 'certs'>('bio');
 
   const { pendingPhone, register, error } = useAuthStore();
+
+  // Image picker
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Please allow access to your photos to upload a profile picture.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5,
+      base64: true,
+    });
+
+    if (!result.canceled && result.assets[0].base64) {
+      setProfileImage(`data:image/jpeg;base64,${result.assets[0].base64}`);
+    }
+  };
 
   // Category lock logic
   const toggleSkill = (skillId: string, categoryId: string) => {
@@ -95,18 +128,20 @@ export default function RegisterScreen() {
   const canProceed = () => {
     switch (currentStep) {
       case 1:
-        return name.trim().length >= 2 && selectedSkills.length > 0;
+        return name.trim().length >= 2;
       case 2:
-        return experienceLevel !== null;
+        return selectedSkills.length > 0;
       case 3:
-        return true; // Bio is optional
+        return experienceLevel !== null;
+      case 4:
+        return true;
       default:
         return false;
     }
   };
 
   const handleNext = () => {
-    if (currentStep < 3) {
+    if (currentStep < 4) {
       setCurrentStep(currentStep + 1);
       scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     } else {
@@ -180,16 +215,41 @@ export default function RegisterScreen() {
         ))}
       </View>
       <Text style={styles.progressText}>
-        Step {currentStep} of 3: {STEPS[currentStep - 1].title}
+        Step {currentStep} of 4: {STEPS[currentStep - 1].title}
       </Text>
     </View>
   );
 
-  const renderStep1Skills = () => (
+  // Step 1: Personal Details
+  const renderStep1Details = () => (
     <View style={styles.stepContent}>
-      {/* Name Input */}
-      <View style={styles.section}>
-        <Text style={styles.label}>Your Name</Text>
+      <Text style={styles.stepTitle}>Personal Details</Text>
+      <Text style={styles.stepDescription}>
+        Tell us about yourself. Only name is required.
+      </Text>
+
+      {/* Profile Picture */}
+      <View style={styles.profilePicSection}>
+        <TouchableOpacity style={styles.profilePicContainer} onPress={pickImage}>
+          {profileImage ? (
+            <Image source={{ uri: profileImage }} style={styles.profilePic} />
+          ) : (
+            <View style={styles.profilePicPlaceholder}>
+              <Ionicons name="camera" size={32} color={THEME.textMuted} />
+              <Text style={styles.profilePicText}>Add Photo</Text>
+            </View>
+          )}
+          <View style={styles.profilePicBadge}>
+            <Ionicons name="add" size={16} color="white" />
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      {/* Name Input - Required */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.inputLabel}>
+          Full Name <Text style={styles.required}>*</Text>
+        </Text>
         <View style={styles.inputContainer}>
           <Ionicons name="person-outline" size={20} color={THEME.textMuted} />
           <TextInput
@@ -202,6 +262,98 @@ export default function RegisterScreen() {
           />
         </View>
       </View>
+
+      {/* Date of Birth */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.inputLabel}>Date of Birth</Text>
+        <View style={styles.inputContainer}>
+          <Ionicons name="calendar-outline" size={20} color={THEME.textMuted} />
+          <TextInput
+            style={styles.input}
+            placeholder="DD/MM/YYYY"
+            placeholderTextColor={THEME.textMuted}
+            value={dateOfBirth}
+            onChangeText={setDateOfBirth}
+            keyboardType="numeric"
+            maxLength={10}
+          />
+        </View>
+      </View>
+
+      {/* Gender */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.inputLabel}>Gender</Text>
+        <View style={styles.genderRow}>
+          {GENDER_OPTIONS.map((option) => (
+            <TouchableOpacity
+              key={option.id}
+              style={[
+                styles.genderOption,
+                gender === option.id && styles.genderOptionSelected,
+              ]}
+              onPress={() => setGender(option.id)}
+            >
+              <Ionicons
+                name={option.icon as any}
+                size={18}
+                color={gender === option.id ? 'white' : THEME.textSecondary}
+              />
+              <Text
+                style={[
+                  styles.genderText,
+                  gender === option.id && styles.genderTextSelected,
+                ]}
+              >
+                {option.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      {/* Aadhaar Card */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.inputLabel}>Aadhaar Card Number</Text>
+        <View style={styles.inputContainer}>
+          <Ionicons name="card-outline" size={20} color={THEME.textMuted} />
+          <TextInput
+            style={styles.input}
+            placeholder="XXXX XXXX XXXX"
+            placeholderTextColor={THEME.textMuted}
+            value={aadhaarCard}
+            onChangeText={setAadhaarCard}
+            keyboardType="numeric"
+            maxLength={14}
+          />
+        </View>
+      </View>
+
+      {/* PAN Card */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.inputLabel}>PAN Card Number</Text>
+        <View style={styles.inputContainer}>
+          <Ionicons name="document-outline" size={20} color={THEME.textMuted} />
+          <TextInput
+            style={styles.input}
+            placeholder="ABCDE1234F"
+            placeholderTextColor={THEME.textMuted}
+            value={panCard}
+            onChangeText={(text) => setPanCard(text.toUpperCase())}
+            autoCapitalize="characters"
+            maxLength={10}
+          />
+        </View>
+      </View>
+    </View>
+  );
+
+  // Step 2: Skills Selection
+  const renderStep2Skills = () => (
+    <View style={styles.stepContent}>
+      <Text style={styles.stepTitle}>Select Your Skills</Text>
+      <Text style={styles.stepDescription}>
+        Choose skills from ONE category only
+      </Text>
 
       {/* Category Lock Badge */}
       {selectedCategoryId && (
@@ -220,9 +372,6 @@ export default function RegisterScreen() {
       )}
 
       {/* Skills Categories */}
-      <Text style={styles.label}>Select Your Skills</Text>
-      <Text style={styles.hint}>Choose skills from ONE category only</Text>
-
       {SKILL_CATEGORIES.map((category) => {
         const isLocked = selectedCategoryId && selectedCategoryId !== category.id;
         const isExpanded = expandedCategory === category.id;
@@ -299,7 +448,8 @@ export default function RegisterScreen() {
     </View>
   );
 
-  const renderStep2Experience = () => (
+  // Step 3: Experience
+  const renderStep3Experience = () => (
     <View style={styles.stepContent}>
       <Text style={styles.stepTitle}>Your Experience Level</Text>
       <Text style={styles.stepDescription}>
@@ -336,36 +486,32 @@ export default function RegisterScreen() {
     </View>
   );
 
+  // Step 4: Profile - Redesigned
   const renderStep4Profile = () => (
     <View style={styles.stepContent}>
       <Text style={styles.stepTitle}>Complete Your Profile</Text>
       <Text style={styles.stepDescription}>
-        Add details to stand out to customers (optional)
+        Stand out to customers with a great profile
       </Text>
 
-      {/* Profile Tabs */}
-      <View style={styles.tabContainer}>
-        {(['bio', 'social', 'certs'] as const).map((tab) => (
-          <TouchableOpacity
-            key={tab}
-            style={[styles.tab, profileTab === tab && styles.tabActive]}
-            onPress={() => setProfileTab(tab)}
-          >
-            <Text style={[styles.tabText, profileTab === tab && styles.tabTextActive]}>
-              {tab === 'bio' ? 'Bio' : tab === 'social' ? 'Social' : 'Certifications'}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {profileTab === 'bio' && (
-        <View style={styles.profileSection}>
-          <Text style={styles.tipText}>
-            A good bio helps customers trust you. Describe your experience and what makes you unique.
-          </Text>
+      {/* Bio Section */}
+      <View style={styles.profileCard}>
+        <LinearGradient
+          colors={[THEME.primary + '15', THEME.primaryLight + '10']}
+          style={styles.profileCardHeader}
+        >
+          <View style={styles.profileCardIcon}>
+            <Ionicons name="document-text" size={24} color={THEME.primary} />
+          </View>
+          <View style={styles.profileCardHeaderText}>
+            <Text style={styles.profileCardTitle}>About You</Text>
+            <Text style={styles.profileCardSubtitle}>Tell your story</Text>
+          </View>
+        </LinearGradient>
+        <View style={styles.profileCardContent}>
           <TextInput
             style={styles.bioInput}
-            placeholder="Tell customers about yourself, your experience, and why they should choose you..."
+            placeholder="I'm a professional with X years of experience. I specialize in... My customers love me because..."
             placeholderTextColor={THEME.textMuted}
             value={bio}
             onChangeText={setBio}
@@ -373,22 +519,38 @@ export default function RegisterScreen() {
             maxLength={500}
             textAlignVertical="top"
           />
-          <Text style={styles.charCount}>{bio.length}/500</Text>
+          <View style={styles.bioFooter}>
+            <View style={styles.bioTip}>
+              <Ionicons name="bulb" size={14} color={THEME.warning} />
+              <Text style={styles.bioTipText}>A good bio increases bookings by 40%</Text>
+            </View>
+            <Text style={styles.charCount}>{bio.length}/500</Text>
+          </View>
         </View>
-      )}
+      </View>
 
-      {profileTab === 'social' && (
-        <View style={styles.profileSection}>
-          <Text style={styles.tipText}>
-            Link your social profiles to showcase your work and build credibility.
-          </Text>
+      {/* Social Links Section */}
+      <View style={styles.profileCard}>
+        <LinearGradient
+          colors={[THEME.secondary + '15', THEME.secondaryLight + '10']}
+          style={styles.profileCardHeader}
+        >
+          <View style={[styles.profileCardIcon, { backgroundColor: THEME.secondary + '20' }]}>
+            <Ionicons name="share-social" size={24} color={THEME.secondary} />
+          </View>
+          <View style={styles.profileCardHeaderText}>
+            <Text style={styles.profileCardTitle}>Social Links</Text>
+            <Text style={styles.profileCardSubtitle}>Showcase your work</Text>
+          </View>
+        </LinearGradient>
+        <View style={styles.profileCardContent}>
           {SOCIAL_PLATFORMS.map((platform) => (
-            <View key={platform.id} style={styles.socialRow}>
-              <View style={[styles.socialIcon, { backgroundColor: platform.color + '20' }]}>
-                <Ionicons name={platform.icon as any} size={20} color={platform.color} />
+            <View key={platform.id} style={styles.socialInputRow}>
+              <View style={[styles.socialIconSmall, { backgroundColor: platform.color + '15' }]}>
+                <Ionicons name={platform.icon as any} size={18} color={platform.color} />
               </View>
               <TextInput
-                style={styles.socialInput}
+                style={styles.socialInputField}
                 placeholder={platform.placeholder}
                 placeholderTextColor={THEME.textMuted}
                 value={socialLinks[platform.id] || ''}
@@ -398,40 +560,66 @@ export default function RegisterScreen() {
             </View>
           ))}
         </View>
-      )}
+      </View>
 
-      {profileTab === 'certs' && (
-        <View style={styles.profileSection}>
-          <Text style={styles.tipText}>
-            Add certifications or achievements to build trust with customers.
-          </Text>
-          <View style={styles.addCertRow}>
+      {/* Certifications Section */}
+      <View style={styles.profileCard}>
+        <LinearGradient
+          colors={[THEME.success + '15', THEME.accentLight + '10']}
+          style={styles.profileCardHeader}
+        >
+          <View style={[styles.profileCardIcon, { backgroundColor: THEME.success + '20' }]}>
+            <Ionicons name="ribbon" size={24} color={THEME.success} />
+          </View>
+          <View style={styles.profileCardHeaderText}>
+            <Text style={styles.profileCardTitle}>Certifications</Text>
+            <Text style={styles.profileCardSubtitle}>Build trust & credibility</Text>
+          </View>
+        </LinearGradient>
+        <View style={styles.profileCardContent}>
+          <View style={styles.certInputRow}>
             <TextInput
-              style={styles.certInput}
+              style={styles.certInputField}
               placeholder="e.g., Licensed Electrician, ISO Certified"
               placeholderTextColor={THEME.textMuted}
               value={newCertification}
               onChangeText={setNewCertification}
+              onSubmitEditing={addCertification}
             />
             <TouchableOpacity
-              style={[styles.addCertBtn, !newCertification.trim() && styles.addCertBtnDisabled]}
+              style={[styles.certAddBtn, !newCertification.trim() && styles.certAddBtnDisabled]}
               onPress={addCertification}
               disabled={!newCertification.trim()}
             >
-              <Ionicons name="add" size={24} color="white" />
+              <Ionicons name="add" size={22} color="white" />
             </TouchableOpacity>
           </View>
-          {certifications.map((cert, index) => (
-            <View key={index} style={styles.certItem}>
-              <Ionicons name="ribbon" size={18} color={THEME.primary} />
-              <Text style={styles.certText}>{cert}</Text>
-              <TouchableOpacity onPress={() => removeCertification(index)}>
-                <Ionicons name="close-circle" size={20} color={THEME.error} />
-              </TouchableOpacity>
+          
+          {certifications.length > 0 && (
+            <View style={styles.certsList}>
+              {certifications.map((cert, index) => (
+                <View key={index} style={styles.certTag}>
+                  <Ionicons name="checkmark-circle" size={16} color={THEME.success} />
+                  <Text style={styles.certTagText}>{cert}</Text>
+                  <TouchableOpacity 
+                    onPress={() => removeCertification(index)}
+                    style={styles.certRemoveBtn}
+                  >
+                    <Ionicons name="close" size={16} color={THEME.textMuted} />
+                  </TouchableOpacity>
+                </View>
+              ))}
             </View>
-          ))}
+          )}
+          
+          {certifications.length === 0 && (
+            <View style={styles.emptyCerts}>
+              <Ionicons name="medal-outline" size={32} color={THEME.textMuted} />
+              <Text style={styles.emptyCertsText}>Add certifications to stand out</Text>
+            </View>
+          )}
         </View>
-      )}
+      </View>
     </View>
   );
 
@@ -461,14 +649,15 @@ export default function RegisterScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {currentStep === 1 && renderStep1Skills()}
-          {currentStep === 2 && renderStep2Experience()}
-          {currentStep === 3 && renderStep4Profile()}
+          {currentStep === 1 && renderStep1Details()}
+          {currentStep === 2 && renderStep2Skills()}
+          {currentStep === 3 && renderStep3Experience()}
+          {currentStep === 4 && renderStep4Profile()}
         </ScrollView>
 
         {/* Footer Button */}
         <View style={styles.footer}>
-          {selectedSkills.length > 0 && currentStep === 1 && (
+          {selectedSkills.length > 0 && currentStep === 2 && (
             <View style={styles.selectionSummary}>
               <Ionicons name="checkmark-circle" size={16} color={THEME.success} />
               <Text style={styles.summaryText}>
@@ -486,10 +675,10 @@ export default function RegisterScreen() {
             ) : (
               <>
                 <Text style={styles.nextButtonText}>
-                  {currentStep === 3 ? 'Complete Setup' : 'Continue'}
+                  {currentStep === 4 ? 'Complete Setup' : 'Continue'}
                 </Text>
                 <Ionicons
-                  name={currentStep === 3 ? 'checkmark-circle' : 'arrow-forward'}
+                  name={currentStep === 4 ? 'checkmark-circle' : 'arrow-forward'}
                   size={20}
                   color="white"
                 />
@@ -558,7 +747,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 1.1 }],
   },
   progressLine: {
-    width: 40,
+    width: 32,
     height: 3,
     backgroundColor: THEME.backgroundSecondary,
     marginHorizontal: 4,
@@ -579,19 +768,71 @@ const styles = StyleSheet.create({
     paddingBottom: THEME.spacing.xxl,
   },
   stepContent: {},
-  section: {
+  stepTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: THEME.text,
+    marginBottom: THEME.spacing.xs,
+  },
+  stepDescription: {
+    fontSize: 14,
+    color: THEME.textSecondary,
     marginBottom: THEME.spacing.lg,
   },
-  label: {
-    fontSize: 16,
+
+  // Step 1: Personal Details
+  profilePicSection: {
+    alignItems: 'center',
+    marginBottom: THEME.spacing.lg,
+  },
+  profilePicContainer: {
+    position: 'relative',
+  },
+  profilePic: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+  },
+  profilePicPlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: THEME.backgroundSecondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: THEME.cardBorder,
+    borderStyle: 'dashed',
+  },
+  profilePicText: {
+    fontSize: 11,
+    color: THEME.textMuted,
+    marginTop: 4,
+  },
+  profilePicBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: THEME.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: THEME.background,
+  },
+  inputGroup: {
+    marginBottom: THEME.spacing.md,
+  },
+  inputLabel: {
+    fontSize: 14,
     fontWeight: '600',
     color: THEME.text,
-    marginBottom: THEME.spacing.sm,
+    marginBottom: THEME.spacing.xs,
   },
-  hint: {
-    fontSize: 13,
-    color: THEME.textMuted,
-    marginBottom: THEME.spacing.md,
+  required: {
+    color: THEME.error,
   },
   inputContainer: {
     flexDirection: 'row',
@@ -609,6 +850,36 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: THEME.text,
   },
+  genderRow: {
+    flexDirection: 'row',
+    gap: THEME.spacing.sm,
+  },
+  genderOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: THEME.cardBg,
+    paddingVertical: THEME.spacing.sm,
+    borderRadius: THEME.borderRadius.medium,
+    borderWidth: 1,
+    borderColor: THEME.cardBorder,
+    gap: 6,
+  },
+  genderOptionSelected: {
+    backgroundColor: THEME.primary,
+    borderColor: THEME.primary,
+  },
+  genderText: {
+    fontSize: 14,
+    color: THEME.textSecondary,
+  },
+  genderTextSelected: {
+    color: 'white',
+    fontWeight: '600',
+  },
+
+  // Step 2: Skills
   lockBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -712,17 +983,8 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: '500',
   },
-  stepTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: THEME.text,
-    marginBottom: THEME.spacing.xs,
-  },
-  stepDescription: {
-    fontSize: 14,
-    color: THEME.textSecondary,
-    marginBottom: THEME.spacing.lg,
-  },
+
+  // Step 3: Experience
   optionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -768,177 +1030,155 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  areaOptions: {
-    gap: THEME.spacing.sm,
+
+  // Step 4: Profile - Redesigned
+  profileCard: {
+    backgroundColor: THEME.cardBg,
+    borderRadius: THEME.borderRadius.xl,
+    marginBottom: THEME.spacing.md,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: THEME.cardBorder,
   },
-  areaCard: {
+  profileCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: THEME.cardBg,
     padding: THEME.spacing.md,
-    borderRadius: THEME.borderRadius.large,
-    borderWidth: 2,
-    borderColor: THEME.cardBorder,
+    gap: THEME.spacing.sm,
   },
-  areaCardSelected: {
-    borderColor: THEME.primary,
-    backgroundColor: THEME.primary + '08',
-  },
-  areaEmoji: {
-    fontSize: 28,
-    marginRight: THEME.spacing.md,
-  },
-  areaInfo: {
-    flex: 1,
-  },
-  areaLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: THEME.text,
-  },
-  areaLabelSelected: {
-    color: THEME.primary,
-  },
-  areaDesc: {
-    fontSize: 13,
-    color: THEME.textMuted,
-  },
-  radioOuter: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: THEME.cardBorder,
+  profileCardIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: THEME.primary + '20',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  radioOuterSelected: {
-    borderColor: THEME.primary,
-  },
-  radioInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: THEME.primary,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: THEME.backgroundSecondary,
-    borderRadius: THEME.borderRadius.medium,
-    padding: 4,
-    marginBottom: THEME.spacing.md,
-  },
-  tab: {
+  profileCardHeaderText: {
     flex: 1,
-    paddingVertical: THEME.spacing.sm,
-    borderRadius: THEME.borderRadius.small,
-    alignItems: 'center',
   },
-  tabActive: {
-    backgroundColor: THEME.cardBg,
+  profileCardTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: THEME.text,
   },
-  tabText: {
+  profileCardSubtitle: {
     fontSize: 13,
     color: THEME.textSecondary,
-    fontWeight: '500',
   },
-  tabTextActive: {
-    color: THEME.primary,
-    fontWeight: '600',
-  },
-  profileSection: {},
-  tipText: {
-    fontSize: 13,
-    color: THEME.textSecondary,
-    backgroundColor: THEME.backgroundSecondary,
+  profileCardContent: {
     padding: THEME.spacing.md,
-    borderRadius: THEME.borderRadius.medium,
-    marginBottom: THEME.spacing.md,
-    lineHeight: 18,
+    paddingTop: 0,
   },
   bioInput: {
-    backgroundColor: THEME.cardBg,
+    backgroundColor: THEME.backgroundSecondary,
     borderRadius: THEME.borderRadius.medium,
-    borderWidth: 1,
-    borderColor: THEME.cardBorder,
     padding: THEME.spacing.md,
     fontSize: 15,
     color: THEME.text,
-    minHeight: 150,
+    minHeight: 120,
+    lineHeight: 22,
+  },
+  bioFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: THEME.spacing.sm,
+  },
+  bioTip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  bioTipText: {
+    fontSize: 11,
+    color: THEME.textMuted,
   },
   charCount: {
-    textAlign: 'right',
     fontSize: 12,
     color: THEME.textMuted,
-    marginTop: THEME.spacing.xs,
   },
-  socialRow: {
+  socialInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: THEME.spacing.sm,
     gap: THEME.spacing.sm,
   },
-  socialIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+  socialIconSmall: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  socialInput: {
+  socialInputField: {
     flex: 1,
-    backgroundColor: THEME.cardBg,
+    backgroundColor: THEME.backgroundSecondary,
     borderRadius: THEME.borderRadius.medium,
-    borderWidth: 1,
-    borderColor: THEME.cardBorder,
     paddingHorizontal: THEME.spacing.md,
     paddingVertical: THEME.spacing.sm,
     fontSize: 14,
     color: THEME.text,
   },
-  addCertRow: {
+  certInputRow: {
     flexDirection: 'row',
     gap: THEME.spacing.sm,
     marginBottom: THEME.spacing.md,
   },
-  certInput: {
+  certInputField: {
     flex: 1,
-    backgroundColor: THEME.cardBg,
+    backgroundColor: THEME.backgroundSecondary,
     borderRadius: THEME.borderRadius.medium,
-    borderWidth: 1,
-    borderColor: THEME.cardBorder,
     paddingHorizontal: THEME.spacing.md,
     paddingVertical: THEME.spacing.sm,
     fontSize: 14,
     color: THEME.text,
   },
-  addCertBtn: {
-    width: 48,
-    height: 48,
+  certAddBtn: {
+    width: 44,
+    height: 44,
     borderRadius: THEME.borderRadius.medium,
-    backgroundColor: THEME.primary,
+    backgroundColor: THEME.success,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  addCertBtnDisabled: {
+  certAddBtnDisabled: {
     backgroundColor: THEME.textMuted,
   },
-  certItem: {
+  certsList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: THEME.spacing.sm,
+  },
+  certTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: THEME.cardBg,
-    padding: THEME.spacing.md,
-    borderRadius: THEME.borderRadius.medium,
-    marginBottom: THEME.spacing.sm,
-    gap: THEME.spacing.sm,
-    borderWidth: 1,
-    borderColor: THEME.cardBorder,
+    backgroundColor: THEME.success + '12',
+    paddingVertical: THEME.spacing.xs,
+    paddingLeft: THEME.spacing.sm,
+    paddingRight: THEME.spacing.xs,
+    borderRadius: THEME.borderRadius.full,
+    gap: 6,
   },
-  certText: {
-    flex: 1,
-    fontSize: 14,
+  certTagText: {
+    fontSize: 13,
     color: THEME.text,
+    fontWeight: '500',
   },
+  certRemoveBtn: {
+    padding: 4,
+  },
+  emptyCerts: {
+    alignItems: 'center',
+    padding: THEME.spacing.lg,
+  },
+  emptyCertsText: {
+    fontSize: 13,
+    color: THEME.textMuted,
+    marginTop: THEME.spacing.xs,
+  },
+
+  // Footer
   footer: {
     padding: THEME.spacing.md,
     backgroundColor: THEME.cardBg,
