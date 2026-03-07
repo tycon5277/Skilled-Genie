@@ -64,7 +64,7 @@ export default function WorkOrdersScreen() {
             <Text style={styles.jobCustomer}>{item.customer_name || 'Customer'}</Text>
           </View>
           <View style={styles.payBadge}>
-            <Text style={styles.payAmount}>${item.estimated_pay || '45'}</Text>
+            <Text style={styles.payAmount}>₹{item.estimated_pay || '450'}</Text>
           </View>
         </View>
 

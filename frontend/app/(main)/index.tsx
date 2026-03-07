@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   Switch,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +16,8 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { useServiceStore } from '../../src/stores/serviceStore';
 import { skilledGenieAPI } from '../../src/api/vendorApi';
 import { THEME, getSkillColor } from '../../src/theme';
+
+const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const { user, refreshProfile } = useAuthStore();
@@ -65,17 +68,10 @@ export default function HomeScreen() {
   };
 
   const userSkills = user?.skills || [];
+  const pendingJobs = availableJobs.length;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* iOS-style Online Status Banner */}
-      {isOnline && (
-        <View style={styles.onlineBanner}>
-          <View style={styles.onlineDot} />
-          <Text style={styles.onlineText}>You're Online</Text>
-        </View>
-      )}
-
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -88,156 +84,214 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* Header */}
+        {/* Header with Online Toggle */}
         <View style={styles.header}>
-          <View>
+          <View style={styles.headerLeft}>
             <Text style={styles.greeting}>{getGreeting()}</Text>
             <Text style={styles.userName}>{user?.name || 'Partner'}</Text>
           </View>
-          <View style={styles.onlineToggle}>
-            <Switch
-              value={isOnline}
-              onValueChange={handleToggleOnline}
-              trackColor={{ false: '#E5E5EA', true: '#34C759' }}
-              thumbColor="#FFFFFF"
-              ios_backgroundColor="#E5E5EA"
-            />
-          </View>
-        </View>
-
-        {/* Stats Cards - iOS grouped style */}
-        <Text style={styles.sectionHeader}>TODAY'S OVERVIEW</Text>
-        <View style={styles.statsCard}>
-          <View style={styles.statRow}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>${periodEarnings.toFixed(0)}</Text>
-              <Text style={styles.statLabel}>This Week</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{totalJobs}</Text>
-              <Text style={styles.statLabel}>Jobs Done</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{user?.rating?.toFixed(1) || '0.0'}</Text>
-              <Text style={styles.statLabel}>Rating</Text>
+          <View style={styles.headerRight}>
+            <View style={styles.onlineToggleContainer}>
+              <Text style={[styles.onlineLabel, isOnline && styles.onlineLabelActive]}>
+                {isOnline ? 'Online' : 'Offline'}
+              </Text>
+              <Switch
+                value={isOnline}
+                onValueChange={handleToggleOnline}
+                trackColor={{ false: '#E5E5EA', true: '#34C759' }}
+                thumbColor="#FFFFFF"
+                ios_backgroundColor="#E5E5EA"
+              />
             </View>
           </View>
         </View>
 
-        {/* Active Job Banner */}
-        {activeJobs.length > 0 && (
-          <>
-            <Text style={styles.sectionHeader}>ACTIVE JOB</Text>
-            <TouchableOpacity
-              style={styles.activeJobCard}
-              onPress={() => router.push('/active-job')}
-              activeOpacity={0.7}
-            >
-              <View style={styles.activeJobIcon}>
-                <Ionicons name="flash" size={24} color="#FF9500" />
-              </View>
-              <View style={styles.activeJobInfo}>
-                <Text style={styles.activeJobTitle}>
-                  {activeJobs[0].service_type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
-                </Text>
-                <Text style={styles.activeJobStatus}>
-                  {activeJobs[0].status.replace('_', ' ').toUpperCase()}
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
-            </TouchableOpacity>
-          </>
+        {/* Online Status Card */}
+        {isOnline && (
+          <View style={styles.statusCard}>
+            <View style={styles.statusIcon}>
+              <Ionicons name="radio" size={20} color="#34C759" />
+            </View>
+            <View style={styles.statusInfo}>
+              <Text style={styles.statusTitle}>You're receiving jobs</Text>
+              <Text style={styles.statusSubtitle}>Customers can find you nearby</Text>
+            </View>
+          </View>
         )}
 
-        {/* Quick Actions */}
-        <Text style={styles.sectionHeader}>QUICK ACTIONS</Text>
-        <View style={styles.actionsCard}>
-          <TouchableOpacity
-            style={styles.actionRow}
-            onPress={() => router.push('/work-orders')}
-            activeOpacity={0.6}
-          >
-            <View style={[styles.actionIcon, { backgroundColor: '#007AFF15' }]}>
-              <Ionicons name="search" size={20} color="#007AFF" />
-            </View>
-            <Text style={styles.actionText}>Find Jobs</Text>
-            <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
-          </TouchableOpacity>
-          
-          <View style={styles.actionDivider} />
-          
-          <TouchableOpacity
-            style={styles.actionRow}
-            onPress={() => router.push('/schedule')}
-            activeOpacity={0.6}
-          >
-            <View style={[styles.actionIcon, { backgroundColor: '#FF950015' }]}>
-              <Ionicons name="calendar" size={20} color="#FF9500" />
-            </View>
-            <Text style={styles.actionText}>My Schedule</Text>
-            <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
-          </TouchableOpacity>
-          
-          <View style={styles.actionDivider} />
-          
-          <TouchableOpacity
-            style={styles.actionRow}
+        {/* Stats Grid */}
+        <View style={styles.statsGrid}>
+          <TouchableOpacity 
+            style={styles.statCard}
             onPress={() => router.push('/my-earnings')}
-            activeOpacity={0.6}
+            activeOpacity={0.7}
           >
-            <View style={[styles.actionIcon, { backgroundColor: '#34C75915' }]}>
-              <Ionicons name="wallet" size={20} color="#34C759" />
-            </View>
-            <Text style={styles.actionText}>Earnings</Text>
-            <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+            <Text style={[styles.statEmoji]}>💰</Text>
+            <Text style={styles.statValue}>₹{periodEarnings.toFixed(0)}</Text>
+            <Text style={styles.statLabel}>This Week</Text>
           </TouchableOpacity>
-          
-          <View style={styles.actionDivider} />
-          
-          <TouchableOpacity
-            style={styles.actionRow}
-            onPress={() => router.push('/my-ratings')}
-            activeOpacity={0.6}
+
+          <TouchableOpacity 
+            style={styles.statCard}
+            onPress={() => router.push('/work-orders')}
+            activeOpacity={0.7}
           >
-            <View style={[styles.actionIcon, { backgroundColor: '#FFCC0015' }]}>
-              <Ionicons name="star" size={20} color="#FFCC00" />
-            </View>
-            <Text style={styles.actionText}>Reviews</Text>
-            <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+            <Text style={[styles.statEmoji]}>💼</Text>
+            <Text style={styles.statValue}>{totalJobs}</Text>
+            <Text style={styles.statLabel}>Jobs Done</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.statCard}
+            onPress={() => router.push('/my-ratings')}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.statEmoji]}>⭐</Text>
+            <Text style={styles.statValue}>{user?.rating?.toFixed(1) || '0.0'}</Text>
+            <Text style={styles.statLabel}>Rating</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.statCard}
+            onPress={() => router.push('/work-orders')}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.statEmoji]}>📋</Text>
+            <Text style={styles.statValue}>{pendingJobs}</Text>
+            <Text style={styles.statLabel}>Available</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Skills */}
+        {/* Active Job Alert */}
+        {activeJobs.length > 0 && (
+          <TouchableOpacity
+            style={styles.activeJobBanner}
+            onPress={() => router.push('/active-job')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.activeJobPulse}>
+              <View style={styles.activeJobDot} />
+            </View>
+            <View style={styles.activeJobInfo}>
+              <Text style={styles.activeJobTitle}>Active Job</Text>
+              <Text style={styles.activeJobType}>
+                {activeJobs[0].service_type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+              </Text>
+            </View>
+            <View style={styles.activeJobAction}>
+              <Text style={styles.activeJobActionText}>View</Text>
+              <Ionicons name="chevron-forward" size={16} color="#007AFF" />
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {/* Earnings Summary */}
+        <View style={styles.earningsCard}>
+          <View style={styles.earningsHeader}>
+            <Text style={styles.earningsTitle}>Earnings</Text>
+            <TouchableOpacity onPress={() => router.push('/my-earnings')}>
+              <Text style={styles.viewAllText}>View All</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.earningsRow}>
+            <View style={styles.earningsItem}>
+              <Text style={styles.earningsAmount}>₹{(periodEarnings / 7).toFixed(0)}</Text>
+              <Text style={styles.earningsLabel}>Today</Text>
+            </View>
+            <View style={styles.earningsDivider} />
+            <View style={styles.earningsItem}>
+              <Text style={styles.earningsAmount}>₹{periodEarnings.toFixed(0)}</Text>
+              <Text style={styles.earningsLabel}>This Week</Text>
+            </View>
+            <View style={styles.earningsDivider} />
+            <View style={styles.earningsItem}>
+              <Text style={styles.earningsAmount}>₹{totalEarnings.toFixed(0)}</Text>
+              <Text style={styles.earningsLabel}>Total</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Quick Actions */}
+        <View style={styles.quickActions}>
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <View style={styles.actionsRow}>
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={() => router.push('/work-orders')}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.actionIcon, { backgroundColor: '#007AFF' }]}>
+                <Ionicons name="search" size={24} color="white" />
+              </View>
+              <Text style={styles.actionLabel}>Find Jobs</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={() => router.push('/schedule')}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.actionIcon, { backgroundColor: '#FF9500' }]}>
+                <Ionicons name="calendar" size={24} color="white" />
+              </View>
+              <Text style={styles.actionLabel}>Schedule</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={() => router.push('/my-earnings')}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.actionIcon, { backgroundColor: '#34C759' }]}>
+                <Ionicons name="cash" size={24} color="white" />
+              </View>
+              <Text style={styles.actionLabel}>Earnings</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={() => router.push('/profile')}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.actionIcon, { backgroundColor: '#5856D6' }]}>
+                <Ionicons name="person" size={24} color="white" />
+              </View>
+              <Text style={styles.actionLabel}>Profile</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* My Skills */}
         {userSkills.length > 0 && (
-          <>
-            <Text style={styles.sectionHeader}>MY SKILLS</Text>
+          <View style={styles.skillsSection}>
+            <Text style={styles.sectionTitle}>My Skills</Text>
             <View style={styles.skillsContainer}>
               {userSkills.map((skill: string, index: number) => {
                 const color = getSkillColor(skill);
                 const formattedSkill = skill.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
                 return (
-                  <View key={index} style={[styles.skillBadge, { backgroundColor: color + '15' }]}>
-                    <View style={[styles.skillDot, { backgroundColor: color }]} />
+                  <View key={index} style={[styles.skillChip, { backgroundColor: color + '15', borderColor: color + '30' }]}>
                     <Text style={[styles.skillText, { color }]}>{formattedSkill}</Text>
                   </View>
                 );
               })}
             </View>
-          </>
+          </View>
         )}
 
-        {/* Total Earnings Card */}
-        <Text style={styles.sectionHeader}>TOTAL EARNINGS</Text>
-        <View style={styles.earningsCard}>
-          <View style={styles.earningsRow}>
-            <Text style={styles.earningsLabel}>Lifetime Earnings</Text>
-            <Text style={styles.earningsValue}>${totalEarnings.toFixed(2)}</Text>
+        {/* Help Section */}
+        <TouchableOpacity style={styles.helpCard} activeOpacity={0.7}>
+          <View style={styles.helpIcon}>
+            <Ionicons name="help-circle" size={24} color="#007AFF" />
           </View>
-        </View>
+          <View style={styles.helpInfo}>
+            <Text style={styles.helpTitle}>Need Help?</Text>
+            <Text style={styles.helpSubtitle}>Contact support for assistance</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+        </TouchableOpacity>
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: 30 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -248,76 +302,106 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: THEME.background,
   },
-  onlineBanner: {
-    backgroundColor: '#34C759',
-    paddingVertical: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  onlineDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: 'white',
-  },
-  onlineText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: 'white',
-  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
+    paddingHorizontal: 16,
+    paddingTop: 8,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: 12,
+  },
+  headerLeft: {
+    flex: 1,
+  },
+  headerRight: {
+    alignItems: 'flex-end',
   },
   greeting: {
-    fontSize: 15,
+    fontSize: 14,
     color: THEME.textMuted,
+    marginBottom: 2,
   },
   userName: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '700',
     color: THEME.text,
     letterSpacing: -0.5,
   },
-  onlineToggle: {
+  onlineToggleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
   },
-  sectionHeader: {
-    fontSize: 13,
-    fontWeight: '500',
+  onlineLabel: {
+    fontSize: 14,
+    fontWeight: '600',
     color: THEME.textMuted,
-    marginTop: 24,
-    marginBottom: 8,
-    marginLeft: 4,
-    letterSpacing: 0.5,
   },
-  statsCard: {
+  onlineLabelActive: {
+    color: '#34C759',
+  },
+  statusCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#34C75910',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#34C75920',
+  },
+  statusIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#34C75915',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statusInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  statusTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#34C759',
+  },
+  statusSubtitle: {
+    fontSize: 13,
+    color: '#34C759',
+    opacity: 0.8,
+    marginTop: 1,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  statCard: {
+    width: '48%',
     backgroundColor: THEME.cardBg,
     borderRadius: 12,
     padding: 16,
-  },
-  statRow: {
-    flexDirection: 'row',
+    marginBottom: 12,
     alignItems: 'center',
   },
-  statItem: {
-    flex: 1,
+  statIconBg: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 10,
   },
   statValue: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '700',
     color: THEME.text,
   },
@@ -326,108 +410,179 @@ const styles = StyleSheet.create({
     color: THEME.textMuted,
     marginTop: 4,
   },
-  statDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: '#E5E5EA',
+  statEmoji: {
+    fontSize: 28,
+    marginBottom: 8,
   },
-  activeJobCard: {
-    backgroundColor: THEME.cardBg,
-    borderRadius: 12,
-    padding: 16,
+  activeJobBanner: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#FF950010',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#FF950030',
   },
-  activeJobIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FF950015',
+  activeJobPulse: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FF950020',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  activeJobDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#FF9500',
   },
   activeJobInfo: {
     flex: 1,
     marginLeft: 12,
   },
   activeJobTitle: {
+    fontSize: 13,
+    color: '#FF9500',
+    fontWeight: '500',
+  },
+  activeJobType: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: THEME.text,
+    marginTop: 2,
+  },
+  activeJobAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  activeJobActionText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  earningsCard: {
+    backgroundColor: THEME.cardBg,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  earningsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  earningsTitle: {
     fontSize: 17,
     fontWeight: '600',
     color: THEME.text,
   },
-  activeJobStatus: {
-    fontSize: 13,
-    color: '#FF9500',
-    marginTop: 2,
+  viewAllText: {
+    fontSize: 15,
+    color: '#007AFF',
+    fontWeight: '500',
   },
-  actionsCard: {
-    backgroundColor: THEME.cardBg,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  actionRow: {
+  earningsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    paddingHorizontal: 16,
   },
-  actionIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    justifyContent: 'center',
+  earningsItem: {
+    flex: 1,
     alignItems: 'center',
   },
-  actionText: {
-    flex: 1,
-    fontSize: 17,
-    color: THEME.text,
-    marginLeft: 12,
+  earningsAmount: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#34C759',
   },
-  actionDivider: {
-    height: 1,
+  earningsLabel: {
+    fontSize: 13,
+    color: THEME.textMuted,
+    marginTop: 4,
+  },
+  earningsDivider: {
+    width: 1,
+    height: 36,
     backgroundColor: '#E5E5EA',
-    marginLeft: 60,
+  },
+  quickActions: {
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: THEME.text,
+    marginBottom: 12,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  actionButton: {
+    alignItems: 'center',
+    width: (width - 56) / 4,
+  },
+  actionIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  actionLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: THEME.text,
+    textAlign: 'center',
+  },
+  skillsSection: {
+    marginBottom: 16,
   },
   skillsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
   },
-  skillBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
+  skillChip: {
+    paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    gap: 6,
-  },
-  skillDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    borderWidth: 1,
   },
   skillText: {
     fontSize: 14,
     fontWeight: '500',
   },
-  earningsCard: {
+  helpCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: THEME.cardBg,
     borderRadius: 12,
-    padding: 16,
+    padding: 14,
   },
-  earningsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  helpIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#007AFF10',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  earningsLabel: {
-    fontSize: 17,
+  helpInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  helpTitle: {
+    fontSize: 16,
+    fontWeight: '600',
     color: THEME.text,
   },
-  earningsValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#34C759',
+  helpSubtitle: {
+    fontSize: 13,
+    color: THEME.textMuted,
+    marginTop: 2,
   },
 });
