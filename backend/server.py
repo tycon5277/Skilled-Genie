@@ -87,7 +87,13 @@ class GenieProfile(BaseModel):
     name: str
     phone: str
     skills: List[str] = []
-    rating: float = 5.0
+    skill_category: Optional[str] = None
+    experience_level: Optional[str] = None
+    service_area: Optional[str] = None
+    bio: Optional[str] = None
+    social_links: Optional[Dict[str, str]] = None
+    certifications: Optional[List[str]] = None
+    rating: float = 0.0
     total_jobs: int = 0
     total_earnings: float = 0.0
     is_online: bool = False
@@ -209,6 +215,12 @@ class RegistrationRequest(BaseModel):
     phone: str
     name: str
     skills: List[str]
+    skill_category: Optional[str] = None
+    experience_level: Optional[str] = None
+    service_area: Optional[str] = None
+    bio: Optional[str] = None
+    social_links: Optional[Dict[str, str]] = None
+    certifications: Optional[List[str]] = None
 
 @api_router.post("/auth/register", response_model=AuthResponse)
 async def register_genie(request: RegistrationRequest):
@@ -223,7 +235,13 @@ async def register_genie(request: RegistrationRequest):
         phone=request.phone,
         name=request.name,
         skills=request.skills,
-        rating=0.0,  # No rating yet
+        skill_category=request.skill_category,
+        experience_level=request.experience_level,
+        service_area=request.service_area,
+        bio=request.bio,
+        social_links=request.social_links,
+        certifications=request.certifications,
+        rating=0.0,
         total_jobs=0,
         total_earnings=0.0,
         is_online=False

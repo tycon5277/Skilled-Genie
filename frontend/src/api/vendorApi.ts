@@ -96,8 +96,17 @@ export const skilledGenieAPI = {
   // Auth
   sendOTP: (phone: string) => vendorAxios.post('/auth/send-otp', { phone }),
   verifyOTP: (phone: string, otp: string) => vendorAxios.post('/auth/verify-otp', { phone, otp }),
-  register: (phone: string, name: string, skills: string[]) => 
-    vendorAxios.post('/auth/register', { phone, name, skills }),
+  register: (data: {
+    phone: string;
+    name: string;
+    skills: string[];
+    skill_category?: string;
+    experience_level?: string;
+    service_area?: string;
+    bio?: string;
+    social_links?: { [key: string]: string };
+    certifications?: string[];
+  }) => vendorAxios.post('/auth/register', data),
 
   // Profile
   getProfile: () => vendorAxios.get('/genie/profile'),

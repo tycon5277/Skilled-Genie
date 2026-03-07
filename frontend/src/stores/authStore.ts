@@ -127,14 +127,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  register: async (phone: string, name: string, skills: string[]) => {
+  register: async (data: {
+    phone: string;
+    name: string;
+    skills: string[];
+    skill_category?: string;
+    experience_level?: string;
+    service_area?: string;
+    bio?: string;
+    social_links?: { [key: string]: string };
+    certifications?: string[];
+  }) => {
     try {
       set({ error: null, isLoading: true });
-      const response = await skilledGenieAPI.register(phone, name, skills);
+      const response = await skilledGenieAPI.register(data);
       
       if (response.data.success && response.data.session_token) {
         await setAuthToken(response.data.session_token);
-        await AsyncStorage.setItem('user_phone', phone);
+        await AsyncStorage.setItem('user_phone', data.phone);
         
         set({
           isAuthenticated: true,
