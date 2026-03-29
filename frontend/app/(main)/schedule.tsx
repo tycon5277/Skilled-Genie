@@ -13,12 +13,13 @@ import { router } from 'expo-router';
 import { useServiceStore } from '../../src/stores/serviceStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { THEME, SERVICE_COLORS, SERVICE_ICONS } from '../../src/theme';
+import { getIndiaWeekDays, getIndiaTime, isIndiaToday, formatIndiaFullDate, formatIndiaDayName } from '../../src/utils/indiaTime';
 
 export default function ScheduleScreen() {
   const { user } = useAuthStore();
   const { activeJobs, fetchActiveJobs } = useServiceStore();
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(getIndiaTime());
   const [viewMode, setViewMode] = useState<'day' | 'week'>('week');
   const isOnline = user?.is_online || false;
 
@@ -32,28 +33,16 @@ export default function ScheduleScreen() {
     setRefreshing(false);
   };
 
-  // Generate week days
-  const getWeekDays = () => {
-    const days = [];
-    const today = new Date();
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      days.push(date);
-    }
-    return days;
-  };
-
-  const weekDays = getWeekDays();
+  // Generate week days using Indian timezone
+  const weekDays = getIndiaWeekDays();
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    return formatIndiaFullDate(date);
   };
 
   const isToday = (date: Date) => {
-    const today = new Date();
-    return date.toDateString() === today.toDateString();
+    return isIndiaToday(date);
   };
 
   const isSelected = (date: Date) => {

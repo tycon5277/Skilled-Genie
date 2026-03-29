@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useServiceStore, Rating } from '../src/stores/serviceStore';
 import { THEME, SERVICE_COLORS } from '../src/theme';
+import { formatIndiaDate } from '../src/utils/indiaTime';
 
 export default function MyRatingsScreen() {
   const {
@@ -95,7 +96,7 @@ export default function MyRatingsScreen() {
           <Text style={styles.comment}>"{item.comment}"</Text>
         )}
         <Text style={styles.date}>
-          {new Date(item.created_at).toLocaleDateString()}
+          {formatIndiaDate(item.created_at)}
         </Text>
       </View>
     );
